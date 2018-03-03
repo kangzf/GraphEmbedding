@@ -97,21 +97,18 @@ ENV/
 # Rope project settings
 .ropeproject
 
-*.pickle
 
-*.mat
-
-*.npy
-
-*.tar.gz
-
-events.out.tfevents.*
-
-*.csv
 
 MatchNodeEmbed/
+*.pickle
+*.mat
+*.npy
+*.tar.gz
+events.out.tfevents.*
 *.txt.gz
 *.zip
 *.mexmaci64
+*.gexf
+*.csv
 liblinear
 files
