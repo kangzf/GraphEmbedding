@@ -1,5 +1,10 @@
-import pickle
 from utils import get_root_path
+from distance import GED
+import pickle
+import networkx as nx
+from random import randint
+import numpy as np
+from time import time
 
 
 class Data(object):
@@ -19,6 +24,25 @@ class Data(object):
             self.init()
             self.save()
             print('%s saved to %s' % (name, sfn))
+            self.num_graphs = len(self.graphs)
+            self.dist = self.get_dist_mat()
+
+    def get_dist_mat(self):
+        dist_mat = np.zeros((self.num_graphs, self.num_graphs))
+        print('Generating distance matrix of {}'.format(dist_mat.shape))
+        print('i,j,#node_i,#node_j,time')
+        for i in range(self.num_graphs):
+            for j in range(i + 1, self.num_graphs):
+                t = time()
+                gi = self.graphs[i]
+                gj = self.graphs[j]
+                ged = GED(gi, gj)
+                dist_mat[i][j] = ged
+                dist_mat[j][i] = ged
+                print('{},{},{},{},{:.5f}'.format( \
+                    i, j, len(gi), len(gj), time() - t))
+        return dist_mat
+
 
     def save(self):
         file = open(self.save_filename(), 'wb')
@@ -32,7 +56,7 @@ class Data(object):
         self.__dict__ = pickle.loads(dp)
 
     def save_filename(self):
-        return '{}/save/{}.txt'.format(get_root_path(), self.name)
+        return '{}/save/{}.pkl'.format(get_root_path(), self.name)
 
 
 class SynData(Data):
@@ -40,8 +64,23 @@ class SynData(Data):
         super().__init__(train)
 
     def init(self):
-        print('actually init')
+        self.graphs = {}
+        if self.train:
+            num_graphs = 90
+        else:
+            num_graphs = 10
+        for i in range(num_graphs):
+            n = randint(5, 20)
+            m = randint(n - 1, n * (n - 1) / 2)
+            self.graphs[i] = nx.gnm_random_graph(n, m)
+        print('Randomly generated %s graphs' % num_graphs)
 
 
-def create_syn_data():
-    pass
+
+def play_with_nx():
+    g = nx.gnm_random_graph(5, 7)
+    print(g)
+
+
+if __name__ == '__main__':
+    play_with_nx()
