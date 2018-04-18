@@ -112,3 +112,8 @@ events.out.tfevents.*
 *.csv
 liblinear
 files
+
+DeepGraphKernels/
+GraphKernels/
+data/
+temp/
