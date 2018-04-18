@@ -2,7 +2,7 @@
 
 def get_model_fun(model, train):
     import sys
-    sys.path.insert(0, get_top_level_path())
+    sys.path.insert(0, get_root_path())
     if model == 'iwge':
         if train:
             from IWGE.src.train import train
@@ -20,6 +20,6 @@ def get_data(data, train):
     else:
         raise RuntimeError('Not recognized data %s' % data)
 
-def get_top_level_path():
-    import os
-    return os.path.dirname(os.path.abspath(__file__)) + '/../'
+def get_root_path():
+    from os.path import dirname, abspath
+    return dirname(dirname(abspath(__file__)))
