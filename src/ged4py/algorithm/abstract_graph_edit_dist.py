@@ -18,7 +18,8 @@ class AbstractGraphEditDistance(object):
         This is done to avoid favorisation towards smaller graphs
         """
         avg_graphlen = (len(self.g1) + len(self.g2)) / 2
-        return self.distance() / avg_graphlen
+        # eturn self.distance() / avg_graphlen # do we reall need normalized??????????????????????
+        return self.distance()
 
     def distance(self):
         return sum(self.edit_costs())
@@ -46,12 +47,12 @@ class AbstractGraphEditDistance(object):
         m = len(self.g2)
         cost_matrix = np.zeros((n+m,n+m))
         #cost_matrix = [[0 for i in range(n + m)] for j in range(n + m)]
-        nodes1 = self.g1.nodes()
-        nodes2 = self.g2.nodes()
+        nodes1 = self.g1.nodes
+        nodes2 = self.g2.nodes
 
         for i in range(n):
             for j in range(m):
-                cost_matrix[i,j] = self.substitute_cost(nodes1[i], nodes2[j])
+                cost_matrix[i,j] = self.substitute_cost(i, j)
 
         for i in range(m):
             for j in range(m):

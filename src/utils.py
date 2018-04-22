@@ -23,3 +23,13 @@ def get_data(data, train):
 def get_root_path():
     from os.path import dirname, abspath
     return dirname(dirname(abspath(__file__)))
+
+def draw_graph(g, file):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    f = plt.figure()
+    import networkx as nx
+    nx.draw(g, ax=f.add_subplot(111))
+    f.savefig(file)
+    print('Saved graph to {}'.format(file))
