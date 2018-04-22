@@ -19,7 +19,6 @@ def compare(g1, g2, print_details=False):
     return int(d)
 
 
-
 class GraphEditDistance(AbstractGraphEditDistance):
 
     def __init__(self, g1, g2):
@@ -49,8 +48,6 @@ class GraphEditDistance(AbstractGraphEditDistance):
         return 1
 
     def edge_diff(self, node1, node2):
-        # edges1 = list([n for n in self.g1.neighbors(node1)])
-        # edges2 = list([n for n in self.g2.neighbors(node2)])
         edges1 = list(self.g1.edge[node1].keys())
         edges2 = list(self.g2.edge[node2].keys())
         if len(edges1) == 0 or len(edges2) == 0:
