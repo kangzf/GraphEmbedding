@@ -28,6 +28,8 @@ class GraphEditDistance(AbstractGraphEditDistance):
         return self.relabel_cost(node1, node2) + self.edge_diff(node1, node2)
 
     def relabel_cost(self, node1, node2):
+        # print(node1)
+        # print(self.g1.nodes[0])
         if node1 == node2:
             return 0.
         else:
