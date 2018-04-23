@@ -16,6 +16,9 @@ def get_data(data, train):
     if data == 'syn':
         from data import SynData
         return SynData(train)
+    elif data == 'protein':
+        from data import ProteinData
+        return ProteinData(train)
     else:
         raise RuntimeError('Not recognized data %s' % data)
 

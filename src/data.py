@@ -5,6 +5,7 @@ import networkx as nx
 from random import randint
 import numpy as np
 from time import time
+from glob import glob
 
 
 class Data(object):
@@ -94,10 +95,28 @@ class SynData(Data):
         return '{}_{}'.format(SynData.train_num_graphs, SynData.test_num_graphs)
 
 
-def play_with_nx():
-    g = nx.gnm_random_graph(5, 7)
-    print(g)
+
+class ProteinData(Data):
+    ########## parameters
+    train_num_graphs = 500
+    test_num_graphs = 100
+    ####################
+
+    def __init__(self, train):
+        if train:
+            self.num_graphs = SynData.train_num_graphs
+        else:
+            self.num_graphs = SynData.test_num_graphs
+        super().__init__(train)
+
+    def init(self):
+        self.graphs = {}
+        for file in glob(get_root_path() + '/data/protein/*.gexf'):
+            x = nx.read_gexf(file)
+            print(x)
+        print('Loaded %s graphs' % len(self.graphs))
+        if self.train:
+            self.train_train_dist = self.get_dist_mat(self.graphs, self.graphs)
 
 
-if __name__ == '__main__':
-    play_with_nx()
+
