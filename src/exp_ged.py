@@ -1,5 +1,5 @@
-from utils import get_data, draw_graph, get_root_path
-from distance import GED
+from utils import get_root_path
+from distance import hungarian_ged, astar_ged
 import networkx as nx
 from time import time
 from random import randint
@@ -13,10 +13,12 @@ def exp1():
     g1 = create_graph([(0, 1), (1, 2), (2, 3), (3, 0), (0, 4), (4, 5)])
     # draw_graph(g0, get_root_path() + '/files/exp_g0.png')
     # draw_graph(g1, get_root_path() + '/files/exp_g1.png')
-    print(GED(g0, g1))
+    print('hungarian_ged', hungarian_ged(g0, g1))
+    print('astar_ged', astar_ged(g0, g1))
     nx.set_node_attributes(g0, 'label', {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0})
     nx.set_node_attributes(g1, 'label', {0: 1, 1: 1, 2: 1, 3: 1, 4: 0, 5: 1})
-    print(GED(g0, g1))
+    print('hungarian_ged', hungarian_ged(g0, g1))
+    print('astar_ged', astar_ged(g0, g1))
 
 def exp2():
     g0 = nx.Graph()
@@ -24,7 +26,8 @@ def exp2():
     g1 = create_graph([(0, 1)])
     nx.set_node_attributes(g0, 'label', {0: 0})
     nx.set_node_attributes(g1, 'label', {0: 0, 1: 1})
-    print(GED(g0, g1))
+    print('hungarian_ged', hungarian_ged(g0, g1))
+    print('astar_ged', astar_ged(g0, g1))
 
 
 def exp3():
@@ -32,10 +35,10 @@ def exp3():
     g1 = create_graph([(0, 1)])
     nx.set_node_attributes(g0, 'label', {0: 1, 1: 1, 2: 0})
     nx.set_node_attributes(g1, 'label', {0: 1, 1: 0})
-    print(GED(g0, g1))
+    print(hungarian_ged(g0, g1))
 
 def exp4():
-    file = open(get_root_path() + '/files/ged_LSAP_2.csv', 'w')
+    file = open(get_root_path() + '/files/ged_astar.csv', 'w')
     xs = list(range(10, 140, 10))
     ys = list(range(10, 140, 10))
     cnt = 10
@@ -52,7 +55,7 @@ def exp4():
                 g1 = generate_random_graph(x)
                 g2 = generate_random_graph(y)
                 t = time()
-                d = GED(g1, g2)
+                d = astar_ged(g1, g2)
                 s = '{},{},{},{},{},{:.5f}'.format( \
                     g1.number_of_nodes(), g2.number_of_nodes(), \
                     g1.number_of_edges(), g2.number_of_edges(), \
@@ -77,10 +80,18 @@ def exp5():
     plt.savefig(get_root_path() + '/files/{}.png'.format(file))
     plt.show()
 
+def exp6():
+    g0 = create_graph([(0, 1), (0, 2), (0, 3), (0, 4), (4, 5), (5, 6), \
+                       (6, 7), (7, 5)])
+    g1 = create_graph([(0, 1), (0, 2), (0, 3), (0, 4), (4, 5), (5, 6), \
+                       (4, 6)])
+    print(hungarian_ged(g0, g1))
+
 def create_graph(edges):
     g = nx.Graph()
     for edge in edges:
         g.add_edge(*edge)
     return g
 
-exp5()
+
+exp4()

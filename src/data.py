@@ -1,5 +1,5 @@
 from utils import get_root_path
-from distance import GED
+from distance import hungarian_ged
 import pickle
 import networkx as nx
 from random import randint
@@ -61,7 +61,7 @@ class Data(object):
                 t = time()
                 gi = graphs1[i]
                 gj = graphs2[j]
-                ged = GED(gi, gj)
+                ged = hungarian_ged(gi, gj)
                 dist_mat[i][j] = ged
                 print('{},{},{},{},{},{:.5f}'.format( \
                     i, j, len(gi), len(gj), ged, time() - t))
