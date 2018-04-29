@@ -2,7 +2,7 @@ from utils import get_root_path
 from distance import hungarian_ged, astar_ged
 import networkx as nx
 from time import time
-from random import randint
+from random import randint, uniform
 from pandas import read_csv
 import matplotlib.pyplot as plt
 import matplotlib
@@ -39,8 +39,8 @@ def exp3():
 
 def exp4():
     file = open(get_root_path() + '/files/ged_astar.csv', 'w')
-    xs = list(range(10, 140, 10))
-    ys = list(range(10, 140, 10))
+    xs = [10]
+    ys = list(range(1, 141, 1))
     cnt = 10
     def print_and_log(s, file):
         print(s)
@@ -50,8 +50,6 @@ def exp4():
     for x in xs:
         for y in ys:
             for i in range(cnt):
-                def generate_random_graph(n):
-                    return nx.gnm_random_graph(n, randint(0, n * (n - 1) / 2))
                 g1 = generate_random_graph(x)
                 g2 = generate_random_graph(y)
                 t = time()
@@ -61,7 +59,20 @@ def exp4():
                     g1.number_of_edges(), g2.number_of_edges(), \
                     d, time() - t)
                 print_and_log(s, file)
+                if d < 0:
+                    exit(-1)
     file.close()
+
+
+def generate_random_graph(n, connected=True):
+    if connected:
+        while True:
+            g = nx.erdos_renyi_graph(n, uniform(0, 1))
+            if nx.is_connected(g):
+                break
+    else:
+        g = nx.gnm_random_graph(n, randint(0, n * (n - 1) / 2))
+    return g
 
 
 def exp5():

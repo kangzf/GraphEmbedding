@@ -24,7 +24,6 @@ result=./result/temp
 # 	if "Beam" is chosen, maximum number of open paths s has to be defined		#
 #########################################################################################
 matching=AStar
-s=10
 adj=best
 
 #########################################################################################

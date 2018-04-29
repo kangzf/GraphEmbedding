@@ -20,8 +20,7 @@ def astar_ged(g1, g2):
         raise RuntimeError('Different meta data {} vs {}'.format(meta1, meta2))
     setup_property_file(src, gp, meta1)
     exec(
-        'cd {} && java -classpath graph-matching-toolkit.jar algorithms.GraphMatching properties/properties_temp.prop'.format(
-            gp))
+        'cd {} && java -classpath /home/yba/Documents/GraphEmbedding/src/graph-matching-toolkit/bin algorithms.GraphMatching ./properties/properties_temp.prop'.format(gp))
     return get_result(gp)
 
 
@@ -47,7 +46,9 @@ def write_to_temp(g, tp, name):
 def get_result(gp):
     with open('{}/result/temp'.format(gp)) as f:
         lines = f.readlines()
-        return (float(lines[22]) + float(lines[23])) # alpha=0.5 --> already /2
+        rtn = float(lines[22]) * 2 # alpha=0.5 --> / 2
+        assert(rtn - int(rtn) == 0)
+        return int(rtn)
 
 
 def get_gmt_path():
