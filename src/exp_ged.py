@@ -38,7 +38,7 @@ def exp3():
     print(hungarian_ged(g0, g1))
 
 def exp4():
-    file = open(get_root_path() + '/files/ged_astar.csv', 'w')
+    file = open(get_root_path() + '/files/ged_astar_lsap.csv', 'w')
     xs = [10]
     ys = list(range(1, 141, 1))
     cnt = 10
@@ -46,20 +46,25 @@ def exp4():
         print(s)
         file.write(s + '\n')
         file.flush()
-    print_and_log('g1_node,g2_node,g1_edge,g2_edge,ged,time_sec', file)
+    print_and_log('g1_node,g2_node,g1_edge,g2_edge,ged_astar,ged_lsap,'
+                  'time_sec_astar,time_sec_lsap', file)
     for x in xs:
         for y in ys:
             for i in range(cnt):
                 g1 = generate_random_graph(x)
                 g2 = generate_random_graph(y)
                 t = time()
-                d = astar_ged(g1, g2)
-                s = '{},{},{},{},{},{:.5f}'.format( \
+                d1 = astar_ged(g1, g2)
+                t1 = time() - t
+                t = time()
+                d2 = hungarian_ged(g1, g2)
+                t2 = time() - t
+                s = '{},{},{},{},{},{},{:.5f},{:.5f}'.format( \
                     g1.number_of_nodes(), g2.number_of_nodes(), \
                     g1.number_of_edges(), g2.number_of_edges(), \
-                    d, time() - t)
+                    d1, d2, t1, t2)
                 print_and_log(s, file)
-                if d < 0:
+                if d1 < 0:
                     exit(-1)
     file.close()
 
@@ -92,10 +97,9 @@ def exp5():
     plt.show()
 
 def exp6():
-    g0 = create_graph([(0, 1), (0, 2), (0, 3), (0, 4), (4, 5), (5, 6), \
-                       (6, 7), (7, 5)])
-    g1 = create_graph([(0, 1), (0, 2), (0, 3), (0, 4), (4, 5), (5, 6), \
-                       (4, 6)])
+    g0 = nx.Graph()
+    g0.add_node(0)
+    g1 = create_graph([(0, 1), (0, 2), (0, 2), (1, 2), (1, 3), (2, 3), (3, 4)])
     print(hungarian_ged(g0, g1))
 
 def create_graph(edges):

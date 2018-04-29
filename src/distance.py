@@ -6,16 +6,22 @@ import networkx as nx
 
 
 def hungarian_ged(g1, g2):
-    # https://github.com/Jacobe2169/ged4py
-    return graph_edit_dist.compare(g1, g2)
+    # # https://github.com/Jacobe2169/ged4py
+    # return graph_edit_dist.compare(g1, g2)
+    return ged(g1, g2, 'hungarian')
 
 
 def astar_ged(g1, g2):
+    return ged(g1, g2, 'astar')
+
+
+
+def ged(g1, g2, algo):
     # https://github.com/dan-zam/graph-matching-toolkit
     gp = get_gmt_path()
     src, tp = setup_temp_folder(gp)
-    meta1 = write_to_temp(g1, tp, 'g1')
-    meta2 = write_to_temp(g2, tp, 'g2')
+    meta1 = write_to_temp(g1, tp, algo, 'g1')
+    meta2 = write_to_temp(g2, tp, algo, 'g2')
     if meta1 != meta2:
         raise RuntimeError('Different meta data {} vs {}'.format(meta1, meta2))
     setup_property_file(src, gp, meta1)
@@ -37,9 +43,9 @@ def setup_property_file(src, gp, meta):
          format(src, meta, gp))
 
 
-def write_to_temp(g, tp, name):
-    node_attres, edge_attrs = nx_to_gxl(g, name, '{}/{}.gxl'.format(tp, name))
-    return 'astar_' + '_'.join(list(node_attres.keys()) + list( \
+def write_to_temp(g, tp, algo, g_name):
+    node_attres, edge_attrs = nx_to_gxl(g, g_name, '{}/{}.gxl'.format(tp, g_name))
+    return algo + '_' + '_'.join(list(node_attres.keys()) + list( \
         edge_attrs.keys()))
 
 
