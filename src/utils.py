@@ -36,3 +36,8 @@ def draw_graph(g, file):
     nx.draw(g, ax=f.add_subplot(111))
     f.savefig(file)
     print('Saved graph to {}'.format(file))
+
+def exec(cmd):
+    from os import system
+    print(cmd)
+    system(cmd)

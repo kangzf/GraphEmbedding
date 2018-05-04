@@ -1,6 +1,5 @@
-from utils import get_root_path
+from utils import get_root_path, exec
 from nx_to_gxl import nx_to_gxl
-from os import system
 import datetime
 import fileinput
 
@@ -82,6 +81,3 @@ def get_gmt_path():
     return get_root_path() + '/src/graph-matching-toolkit'
 
 
-def exec(cmd):
-    print(cmd)
-    system(cmd)
