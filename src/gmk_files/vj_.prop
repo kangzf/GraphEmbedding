@@ -23,7 +23,7 @@ result=./result/temp
 # 	graph matching paradigm (possible choices are: AStar, Beam, Hungarian, VJ)	#
 # 	if "Beam" is chosen, maximum number of open paths s has to be defined		#
 #########################################################################################
-matching=AStar
+matching=VJ
 adj=best
 
 #########################################################################################

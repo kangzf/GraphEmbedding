@@ -1,5 +1,5 @@
 from utils import get_root_path
-from distance import hungarian_ged, astar_ged
+from distance import astar_ged, beam_ged, hungarian_ged, vj_ged, ged, get_ts
 import networkx as nx
 from time import time
 from random import randint, uniform
@@ -20,6 +20,7 @@ def exp1():
     print('hungarian_ged', hungarian_ged(g0, g1))
     print('astar_ged', astar_ged(g0, g1))
 
+
 def exp2():
     g0 = nx.Graph()
     g0.add_node(0)
@@ -37,36 +38,48 @@ def exp3():
     nx.set_node_attributes(g1, 'label', {0: 1, 1: 0})
     print(hungarian_ged(g0, g1))
 
+
 def exp4():
-    file = open(get_root_path() + '/files/ged_astar_lsap.csv', 'w')
+    ms = ['astar', 'beam5', 'beam10', 'beam20', 'beam40', 'beam80',
+          'hungarian', 'vj']
+    fn = '_'.join(ms)
+    file = open(get_root_path() + '/files/ged_{}_{}.csv'.format(fn, get_ts()),
+                'w')
     xs = [10]
-    ys = list(range(1, 141, 1))
+    ys = list(range(10, 141, 10))
     cnt = 10
-    def print_and_log(s, file):
-        print(s)
-        file.write(s + '\n')
-        file.flush()
-    print_and_log('g1_node,g2_node,g1_edge,g2_edge,ged_astar,ged_lsap,'
-                  'time_sec_astar,time_sec_lsap', file)
+    ged_s = ','.join(['ged_' + i for i in ms])
+    time_s = ','.join(['time_' + i for i in ms])
+    print_and_log('g1_node,g2_node,g1_edge,g2_edge,{},{}'.format( \
+        ged_s, time_s), file)
     for x in xs:
         for y in ys:
             for i in range(cnt):
                 g1 = generate_random_graph(x)
                 g2 = generate_random_graph(y)
-                t = time()
-                d1 = astar_ged(g1, g2)
-                t1 = time() - t
-                t = time()
-                d2 = hungarian_ged(g1, g2)
-                t2 = time() - t
-                s = '{},{},{},{},{},{},{:.5f},{:.5f}'.format( \
+                ds = []
+                ts = []
+                for m in ms:
+                    t = time()
+                    d = ged(g1, g2, m)
+                    t = time() - t
+                    ds.append(d)
+                    ts.append(t)
+                s = '{},{},{},{},{},{}'.format( \
                     g1.number_of_nodes(), g2.number_of_nodes(), \
                     g1.number_of_edges(), g2.number_of_edges(), \
-                    d1, d2, t1, t2)
+                    ','.join(str(i) for i in ds),
+                    ','.join(['{:.5f}'.format(i) for i in ts]))
                 print_and_log(s, file)
-                if d1 < 0:
-                    exit(-1)
+                # if d1 < 0:
+                #     exit(-1)
     file.close()
+
+
+def print_and_log(s, file):
+    print(s)
+    file.write(s + '\n')
+    file.flush()
 
 
 def generate_random_graph(n, connected=True):
@@ -84,23 +97,59 @@ def exp5():
     font = {'family': 'serif',
             'size': 22}
     matplotlib.rc('font', **font)
-    file = 'ged_LSAP'
+    file = 'ged_astar_beam5_beam10_beam20_beam40_beam80_hungarian_vj_2018-04-29T14:56:38.676491'
     data = read_csv(get_root_path() + '/files/{}.csv'.format(file))
+    args = [{'marker': '*', 'facecolors': 'none', 'edgecolors': 'grey'},
+            {'marker': '|', 'facecolors': 'red'},
+            {'marker': '_', 'facecolors': 'b'},
+            {'marker': 'D', 'facecolors': 'none', 'edgecolors': 'forestgreen'},
+            {'marker': '^', 'facecolors': 'none', 'edgecolors': 'darkorange'},
+            {'marker': 's', 'facecolors': 'none', 'edgecolors': 'cyan'},
+            {'marker': 'X', 'facecolors': 'none', 'edgecolors': 'deepskyblue'},
+            {'marker': 'P', 'facecolors': 'none', 'edgecolors': 'red'}]
+    models = []
+    for model in data.columns.values:
+        if 'time' in model:
+            models.append(model.split('_')[1])
+    if 'astar' in models:
+        for i, t in data['time_astar'].iteritems():
+            if t >= 300:
+                data.loc[i, 'time_astar'] = 300
+                data.loc[i, 'ged_astar'] = 0
     print(data)
-    plt.scatter(data['g2_node'], data['time_sec'], label="LSAP (ged4py)")
+    plt.figure(0)
+    plt.figure(figsize=(16, 10))
+    for i, model in enumerate(models):
+        if model == 'astar':
+            continue
+        plt.scatter(data['g2_node'], data['time_' + model], s=150, label=model, **args[i])
     plt.xlabel('# nodes of graph 2')
     plt.ylabel('time (sec)')
     plt.legend(loc='best')
     plt.grid(linestyle='dashed')
     plt.tight_layout()
-    plt.savefig(get_root_path() + '/files/{}.png'.format(file))
-    plt.show()
+    plt.savefig(get_root_path() + '/files/{}_time.png'.format(file))
+    #plt.show()
+    plt.figure(1)
+    plt.figure(figsize=(11, 11))
+    for i, model in enumerate(models):
+        plt.scatter(data['ged_astar'], data['ged_' + model], s=150, label=model, **args[i])
+    plt.xlabel('true ged')
+    plt.ylabel('ged')
+    plt.xlim(1, 57)
+    plt.legend(loc='best')
+    plt.grid(linestyle='dashed')
+    plt.tight_layout()
+    plt.savefig(get_root_path() + '/files/{}_ged.png'.format(file))
+    #plt.show()
+
 
 def exp6():
     g0 = nx.Graph()
     g0.add_node(0)
     g1 = create_graph([(0, 1), (0, 2), (0, 2), (1, 2), (1, 3), (2, 3), (3, 4)])
     print(hungarian_ged(g0, g1))
+
 
 def create_graph(edges):
     g = nx.Graph()
@@ -109,4 +158,4 @@ def create_graph(edges):
     return g
 
 
-exp4()
+exp5()

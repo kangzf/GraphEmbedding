@@ -69,6 +69,28 @@ class Data(object):
 
 
 class SynData(Data):
+    def __init__(self, train):
+        if train:
+            self.num_graphs = SynData.train_num_graphs
+        else:
+            self.num_graphs = SynData.test_num_graphs
+        super().__init__(train)
+
+    def init(self):
+        self.graphs = {}
+        for i in range(self.num_graphs):
+            n = randint(5, 20)
+            m = randint(n - 1, n * (n - 1) / 2)
+            self.graphs[i] = nx.gnm_random_graph(n, m)
+        print('Randomly generated %s graphs' % self.num_graphs)
+        if self.train:
+            self.train_train_dist = self.get_dist_mat(self.graphs, self.graphs)
+
+    def name_suffix(self):
+        return '{}_{}'.format(SynData.train_num_graphs, SynData.test_num_graphs)
+
+
+class AIDSData(Data):
     ########## parameters
     train_num_graphs = 10
     test_num_graphs = 5
@@ -93,7 +115,6 @@ class SynData(Data):
 
     def name_suffix(self):
         return '{}_{}'.format(SynData.train_num_graphs, SynData.test_num_graphs)
-
 
 
 class ProteinData(Data):
