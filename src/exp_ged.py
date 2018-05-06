@@ -1,11 +1,12 @@
-from utils import get_root_path
-from distance import astar_ged, beam_ged, hungarian_ged, vj_ged, ged, get_ts
+from utils import get_root_path, get_data, get_ts
+from distance import astar_ged, beam_ged, hungarian_ged, vj_ged, ged
 import networkx as nx
 from time import time
 from random import randint, uniform
 from pandas import read_csv
 import matplotlib.pyplot as plt
 import matplotlib
+import numpy as np
 
 
 def exp1():
@@ -150,6 +151,39 @@ def exp6():
     g1 = create_graph([(0, 1), (0, 2), (0, 2), (1, 2), (1, 3), (2, 3), (3, 4)])
     print(hungarian_ged(g0, g1))
 
+def exp7():
+    dataset = 'aids10k'
+    model = 'astar'
+    train_data = get_data(dataset, True)
+    test_data = get_data(dataset, False)
+    m = len(test_data.graphs)
+    n = len(train_data.graphs)
+    ged_mat = np.zeros((m, n))
+    time_mat = np.zeros((n, n))
+    outdir = get_root_path() + '/files'
+    file = open('{}/ged_{}_{}_{}.csv'.format( \
+        outdir, dataset, model, get_ts()), 'w')
+    print_and_log('i,j,i_node,j_node,i_edge,j_edge,ged,time', file)
+    for i in range(m):
+        for j in range(n):
+            g1 = test_data.graphs[i]
+            g2 = train_data.graphs[j]
+            t = time()
+            d = ged(g1, g2, model)
+            t = time() - t
+            s = '{},{},{},{},{},{},{},{:.5f}'.format(i, j, \
+                g1.number_of_nodes(), g2.number_of_nodes(), \
+                g1.number_of_edges(), g2.number_of_edges(), \
+                d, t)
+            print_and_log(s, file)
+            ged_mat[i][j] = d
+            time_mat[i][j] = t
+    file.close()
+    np.save('{}/ged_ged_mat_{}_{}_{}'.format( \
+        outdir, dataset, model, get_ts()), ged_mat)
+    np.save('{}/ged_time_mat_{}_{}_{}'.format(\
+        outdir, dataset, model, get_ts()), ged_mat)
+
 
 def create_graph(edges):
     g = nx.Graph()
@@ -158,4 +192,4 @@ def create_graph(edges):
     return g
 
 
-exp5()
+exp7()

@@ -16,18 +16,15 @@ class Data(object):
             name += 'train'
         else:
             name += 'test'
-        name += ('_' + self.name_suffix())
+        name += self.name_suffix()
         self.name = name
         sfn = self.save_filename()
         try:
             self.load()
             print('%s loaded from %s' % (name, sfn))
         except Exception as e:
-            print(e)
             self.init()
             self.num_graphs = len(self.graphs)
-            if not self.train:
-                self.test_train_dist = self.get_truth_dist()
             self.save()
             print('%s saved to %s' % (name, sfn))
 
@@ -47,10 +44,6 @@ class Data(object):
 
     def save_filename(self):
         return '{}/save/{}.pkl'.format(get_root_path(), self.name)
-
-    def get_truth_dist(self):
-        train_data = self.__class__(train=True)
-        return self.get_dist_mat(self.graphs, train_data.graphs)
 
     def get_dist_mat(self, graphs1, graphs2):
         dist_mat = np.zeros((len(graphs1), len(graphs2)))
@@ -77,67 +70,37 @@ class SynData(Data):
         super().__init__(train)
 
     def init(self):
-        self.graphs = {}
+        self.graphs = []
+        self.gids = []
         for i in range(self.num_graphs):
             n = randint(5, 20)
             m = randint(n - 1, n * (n - 1) / 2)
-            self.graphs[i] = nx.gnm_random_graph(n, m)
+            self.graphs.append(nx.gnm_random_graph(n, m))
+            self.gids.append(i)
         print('Randomly generated %s graphs' % self.num_graphs)
         if self.train:
             self.train_train_dist = self.get_dist_mat(self.graphs, self.graphs)
 
     def name_suffix(self):
-        return '{}_{}'.format(SynData.train_num_graphs, SynData.test_num_graphs)
+        return '_{}_{}'.format(SynData.train_num_graphs,
+                               SynData.test_num_graphs)
 
 
-class AIDSData(Data):
-    ########## parameters
-    train_num_graphs = 10
-    test_num_graphs = 5
-    ####################
-
+class AIDS10kData(Data):
     def __init__(self, train):
-        if train:
-            self.num_graphs = SynData.train_num_graphs
-        else:
-            self.num_graphs = SynData.test_num_graphs
         super().__init__(train)
 
     def init(self):
-        self.graphs = {}
-        for i in range(self.num_graphs):
-            n = randint(5, 20)
-            m = randint(n - 1, n * (n - 1) / 2)
-            self.graphs[i] = nx.gnm_random_graph(n, m)
-        print('Randomly generated %s graphs' % self.num_graphs)
-        if self.train:
-            self.train_train_dist = self.get_dist_mat(self.graphs, self.graphs)
-
-    def name_suffix(self):
-        return '{}_{}'.format(SynData.train_num_graphs, SynData.test_num_graphs)
-
-
-class ProteinData(Data):
-    ########## parameters
-    train_num_graphs = 500
-    test_num_graphs = 100
-    ####################
-
-    def __init__(self, train):
-        if train:
-            self.num_graphs = SynData.train_num_graphs
-        else:
-            self.num_graphs = SynData.test_num_graphs
-        super().__init__(train)
-
-    def init(self):
-        self.graphs = {}
-        for file in glob(get_root_path() + '/data/protein/*.gexf'):
-            x = nx.read_gexf(file)
-            print(x)
-        print('Loaded %s graphs' % len(self.graphs))
-        if self.train:
-            self.train_train_dist = self.get_dist_mat(self.graphs, self.graphs)
-
-
+        self.graphs = []
+        self.gids = []
+        datadir = get_root_path() + '/data/AIDS10k/' + ('train' if self.train \
+            else 'test')
+        for file in glob(datadir + '/*.gexf'):
+            gid = int(file.split('/')[-1].split('.')[0])
+            g = nx.read_gexf(file)
+            self.graphs.append(g)
+            self.gids.append(gid)
+            if not nx.is_connected(g):
+                raise RuntimeError('{} not connected'.format(gid))
+        print('Loaded {} graphs from {}'.format(len(self.graphs), datadir))
 

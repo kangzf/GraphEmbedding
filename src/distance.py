@@ -1,10 +1,6 @@
-from utils import get_root_path, exec
+from utils import get_root_path, exec, get_ts
 from nx_to_gxl import nx_to_gxl
-import datetime
 import fileinput
-
-tstamp = None
-
 
 def hungarian_ged(g1, g2):
     # # https://github.com/Jacobe2169/ged4py
@@ -31,11 +27,13 @@ def ged(g1, g2, algo):
     meta1 = write_to_temp(g1, tp, algo, 'g1')
     meta2 = write_to_temp(g2, tp, algo, 'g2')
     if meta1 != meta2:
-        raise RuntimeError('Different meta data {} vs {}'.format(meta1, meta2))
+        raise RuntimeError(
+            'Different meta data {} vs {}'.format(meta1, meta2))
     setup_property_file(src, gp, meta1)
-    exec(
+    if not exec(
         'cd {} && java -classpath /home/yba/Documents/GraphEmbedding/src/graph-matching-toolkit/bin algorithms.GraphMatching ./properties/properties_temp_{}.prop'.format(
-            gp, get_ts()))
+            gp, get_ts()), timeout=1000):
+        return -1
     return get_result(gp, algo)
 
 
@@ -67,17 +65,11 @@ def get_result(gp, algo):
         ln = 23 if 'beam' in algo else 22
         rtn = float(lines[ln]) * 2  # alpha=0.5 --> / 2
         assert (rtn - int(rtn) == 0)
-        return int(rtn)
-
-
-def get_ts():
-    global tstamp
-    if not tstamp:
-        tstamp = datetime.datetime.now().isoformat()
-    return tstamp
+        rtn = int(rtn)
+        if rtn < 0:
+            rtn = -1  # in case rtn == -2
+        return rtn
 
 
 def get_gmt_path():
     return get_root_path() + '/src/graph-matching-toolkit'
-
-

@@ -48,16 +48,20 @@ def gen_aids10k():
     graphs = {}
     nodes_graphs = defaultdict(list)
     lesseq30 = set()
+    disconnect_count = 0
     for file in glob(dirin + '/*.gexf'):
         gid = int(file.split('/')[-1].split('.')[0])
         g = nx.read_gexf(file)
         if not nx.is_connected(g):
             print('{} not connected'.format(gid))
+            disconnect_count += 1
             continue
         graphs[gid] = g
         nodes_graphs[g.number_of_nodes()].append(gid)
         if g.number_of_nodes() <= 30:
             lesseq30.add(gid)
+    print(disconnect_count)
+    exit(1)
     print(nodes_graphs[222])
     print(nodes_graphs[2])
     train_dir = '{}/AIDS10k/train'.format(datadir)

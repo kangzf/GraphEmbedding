@@ -1,6 +1,6 @@
 #################### paramaters
 model = 'iwge'
-data = 'protein'
+data = 'aids10k'
 exp = 'try'
 train = 1
 ####################
