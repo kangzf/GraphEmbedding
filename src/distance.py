@@ -31,8 +31,8 @@ def ged(g1, g2, algo):
             'Different meta data {} vs {}'.format(meta1, meta2))
     setup_property_file(src, gp, meta1)
     if not exec(
-        'cd {} && java -classpath /home/yba/Documents/GraphEmbedding/src/graph-matching-toolkit/bin algorithms.GraphMatching ./properties/properties_temp_{}.prop'.format(
-            gp, get_ts()), timeout=1000):
+        'cd {} && java -classpath {}/src/graph-matching-toolkit/bin algorithms.GraphMatching ./properties/properties_temp_{}.prop'.format(
+            gp, get_root_path(), get_ts()), timeout=1000):
         return -1
     return get_result(gp, algo)
 
