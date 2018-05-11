@@ -119,4 +119,6 @@ data/
 temp/
 save/
 try.py
-graph-matching-toolkit
+graph-matching-toolkit/
+graph-lib/
+graph2vec_tf/

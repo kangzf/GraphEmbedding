@@ -1,5 +1,5 @@
-from vis import *
-from utils import get_data
+from vis import vis
+from utils import load_data, get_root_path
 
 info_dict = {
     'draw_node_size': 10,
@@ -9,19 +9,19 @@ info_dict = {
            'O': 'blue',
            'N': 'green'},
    
-    'draw_edge_label_enable': False,
+    'draw_edge_label_enable': True,
     'draw_edge_label_font_size': 6,
 
-    'each_graph_text_list': ["test1", "test2", "test3", "test4", "test5", "test6", "test7", "test8", "test9", "test10"],
+    'each_graph_text_list': ["query", "test1", "test2", "test3", "test4", "test5", "test6", "test7", "test8", "test9", "test10"],
     'each_graph_font_size': 10,
 
     'plot_dpi': 200,
-    'plot_save_path': 'plot2'
+    'plot_save_path': get_root_path() + '/temp/test_vis.png'
 }
 
 
-test_data = get_data('aids10k', train=False)
-train_data = get_data('aids10k', train=True)
+test_data = load_data('aids10k', train=False)
+train_data = load_data('aids10k', train=True)
 q = test_data.graphs[0]
 
 gs = []

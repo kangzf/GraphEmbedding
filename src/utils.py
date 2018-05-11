@@ -12,7 +12,7 @@ def get_model_fun(model, train):
         raise RuntimeError('Not recognized model %s' % model)
 
 
-def get_data(data, train):
+def load_data(data, train):
     if data == 'syn':
         from data import SynData
         return SynData(train)
@@ -84,3 +84,6 @@ def get_ts():
     if not tstamp:
         tstamp = datetime.datetime.now().isoformat()
     return tstamp
+
+def get_file_base_id(file):
+    return int(file.split('/')[-1].split('.')[0])

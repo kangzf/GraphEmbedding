@@ -5,9 +5,9 @@ exp = 'try'
 train = 1
 ####################
 
-from utils import get_model_fun, get_data
+from utils import get_model_fun, load_data
 model_func = get_model_fun(model, train)
-data = get_data(data, train)
+data = load_data(data, train)
 
 from time import time
 if train:

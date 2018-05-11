@@ -1,5 +1,6 @@
-from utils import get_root_path, get_data, get_ts
+from utils import get_root_path, load_data, get_ts
 from distance import astar_ged, beam_ged, hungarian_ged, vj_ged, ged
+from vis import vis
 import networkx as nx
 from time import time
 from random import randint, uniform
@@ -177,8 +178,8 @@ def exp6():
 def exp7():
     dataset = 'aids10k'
     model = 'vj'
-    train_data = get_data(dataset, True)
-    test_data = get_data(dataset, False)
+    train_data = load_data(dataset, True)
+    test_data = load_data(dataset, False)
     m = len(test_data.graphs)
     n = len(train_data.graphs)
     ged_mat = np.zeros((m, n))
@@ -270,9 +271,8 @@ def get_result_mat(metric, dataset, model):
 
 
 def get_test_graph_sizes(dataset):
-    test_data = get_data(dataset, train=False)
-    return [test_data.graphs[i].number_of_nodes() for i in \
-            range(len(test_data.gids))]
+    test_data = load_data(dataset, train=False)
+    return [g.number_of_nodes() for g in test_data.graphs)]
 
 
 def exp9():
@@ -329,4 +329,52 @@ def precision_at_ks(true_mat, pred_mat, ks, print_ids=[]):
     return np.mean(ps, axis=0)
 
 
-exp9()
+def exp10():
+    # Query visualization.
+    dataset = 'aids10k'
+    model = 'beam80'
+    k = 5
+    info_dict = {
+        'draw_node_size': 10,
+        'draw_node_label_enable': True,
+        'draw_node_label_font_size': 8,
+        'draw_node_color_map': {'C': 'red',
+                                'O': 'blue',
+                                'N': 'green'},
+        'draw_edge_label_enable': True,
+        'draw_edge_label_font_size': 6,
+        'each_graph_text_list': [],
+        'each_graph_font_size': 10,
+        'plot_dpi': 200,
+        'plot_save_path': ''
+    }
+    ged_mat = get_result_mat('ged', dataset, model)
+    time_mat = get_result_mat('time', dataset, model)
+    ids = np.argsort(ged_mat)
+    m, n = ged_mat.shape
+    train_data = load_data(dataset, train=True)
+    test_data = load_data(dataset, train=False)
+    for i in range(m):
+        q = test_data.graphs[i]
+        gids = ids[i][:k]
+        gs = [train_data.graphs[j] for j in gids]
+        info_dict['each_graph_text_list'] = \
+            ['query id: {}'.format(q.graph['gid'])] + \
+            [get_text_label(ged_mat, time_mat, i, j, \
+                            train_data.graphs[j]) for j in gids]
+        info_dict['plot_save_path'] = \
+            get_root_path() + \
+            '/files/query_vis/{}/{}/query_vis_{}_{}_{}.png'.format( \
+                dataset, model, dataset, model, i)
+        vis(q, gs, info_dict)
+
+
+def get_text_label(ged_mat, time_mat, i, j, g):
+    return 'id: {}\ntrue id: {}\n ged: {}\ntime: {:.5f}sec'.format( \
+        j, g.graph['gid'], ged_mat[i][j], time_mat[i][j])
+
+
+
+
+
+exp10()
