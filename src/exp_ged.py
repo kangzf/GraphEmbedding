@@ -1,5 +1,6 @@
 from utils import get_root_path, load_data, get_ts
 from distance import astar_ged, beam_ged, hungarian_ged, vj_ged, ged
+from result import load_results_as_dict, load_result
 from vis import vis
 import networkx as nx
 from time import time
@@ -223,14 +224,15 @@ class Metric(object):
 def exp8():
     # Plot ged and time.
     dataset = 'aids10k'
-    models = ['astar', 'beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
+    models = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
               'hungarian', 'vj']
+    rs = load_results_as_dict(dataset, models)
     metrics = [Metric('ged', 'ged'), Metric('time', 'time (sec)')]
     for metric in metrics:
-        exp8_helper(dataset, models, metric)
+        exp8_helper(dataset, models, metric, rs)
 
 
-def exp8_helper(dataset, models, metric):
+def exp8_helper(dataset, models, metric, rs):
     font = {'family': 'serif',
             'size': 22}
     matplotlib.rc('font', **font)
@@ -242,9 +244,7 @@ def exp8_helper(dataset, models, metric):
     so = np.argsort(xs)
     xs.sort()
     for model in models:
-        if model == 'astar':
-            continue
-        mat = get_result_mat(metric, dataset, model)
+        mat = rs[model].mat(metric.name)
         print('plotting for {}'.format(model))
         ys = np.mean(mat, 1)[so]
         plt.plot(xs, ys, **args1[model])
@@ -261,16 +261,6 @@ def exp8_helper(dataset, models, metric):
         dataset, metric, metric, dataset, '_'.join(models)))
 
 
-def get_result_mat(metric, dataset, model):
-    file_p = get_root_path() + '/files/{}/{}/ged_{}_mat_{}_{}_*.npy'.format( \
-        dataset, metric, metric, dataset, model)
-    li = glob(file_p)
-    if len(li) != 1:
-        raise RuntimeError('Files for {}: {}'.format(file_p, li))
-    file = li[0]
-    return np.load(file)
-
-
 def get_test_graph_sizes(dataset):
     test_data = load_data(dataset, train=False)
     return [g.number_of_nodes() for g in test_data.graphs]
@@ -281,11 +271,13 @@ def exp9():
     dataset = 'aids10k'
     models = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
               'hungarian', 'vj']
+    true_model = 'beam80'
     metric = 'ap@k'
-    true_mat = get_result_mat('ged', dataset, 'beam80')
+    rs = load_results_as_dict(dataset, models)
+    true_result = rs[true_model]
     ks = []
     k = 1
-    while k < true_mat.shape[1]:
+    while k < true_result.ged_mat().shape[1]:
         ks.append(k)
         k *= 2
     # print_ids = range(true_mat.shape[0])
@@ -298,8 +290,7 @@ def exp9():
 
     for model in models:
         print(model)
-        pred_mat = get_result_mat('ged', dataset, model)
-        aps = precision_at_ks(true_mat, pred_mat, ks, print_ids)
+        aps = precision_at_ks(true_result, rs[model], ks, print_ids)
         #print('aps {}: {}'.format(model, aps))
         plt.semilogx(ks, aps, **args1[model])
         plt.scatter(ks, aps, s=200, label=model, **args2[model])
@@ -315,18 +306,19 @@ def exp9():
       dataset, metric, metric, dataset, '_'.join(models)))
 
 
-def precision_at_ks(true_mat, pred_mat, ks, print_ids=[]):
-    x = np.argsort(true_mat)
+def precision_at_ks(true_r, pred_r, ks, print_ids=[]):
+    true_ids = true_r.ged_sort_id_mat()
     # print(x)
-    y = np.argsort(pred_mat)
+    pred_ids = pred_r.ged_sort_id_mat()
     # print(y)
-    m, n = true_mat.shape
-    assert (true_mat.shape == pred_mat.shape)
+    m, n = true_ids.shape
+    assert (true_ids.shape == pred_ids.shape)
     ps = np.zeros((m, len(ks)))
     for i in range(m):
         for k_idx, k in enumerate(ks):
             assert (type(k) is int and k > 0 and k < n)
-            ps[i][k_idx] = len(set(x[i][:k]).intersection(y[i][:k])) / k
+            ps[i][k_idx] = len(set(true_ids[i][:k]).intersection( \
+                pred_ids[i][:k])) / k
         if i in print_ids:
             print('query {}\nks:    {}\nprecs: {}'.format(i, ks, ps[i]))
     return np.mean(ps, axis=0)
@@ -351,9 +343,10 @@ def exp10():
         'plot_dpi': 200,
         'plot_save_path': ''
     }
-    ged_mat = get_result_mat('ged', dataset, model)
-    time_mat = get_result_mat('time', dataset, model)
-    ids = np.argsort(ged_mat)
+    r = load_result(dataset, model)
+    ged_mat = r.ged_mat()
+    time_mat = r.time_mat()
+    ids = r.ged_sort_id_mat()
     m, n = ged_mat.shape
     train_data = load_data(dataset, train=True)
     test_data = load_data(dataset, train=False)
@@ -380,4 +373,4 @@ def get_text_label(ged_mat, time_mat, i, j, g):
 
 
 
-exp10()
+exp8()
