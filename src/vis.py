@@ -104,6 +104,7 @@ def vis(q=None, gs=None, info_dict=None):
     if save_path is None or save_path == "":
         plt.show()
     else:
-        plt.savefig(info_dict['plot_save_path'], dpi=info_dict['plot_dpi'])
-        
+        sp = info_dict['plot_save_path']
+        print('Saving qeury vis plot to {}'.format(sp))
+        plt.savefig(sp, dpi=info_dict['plot_dpi'])
 
