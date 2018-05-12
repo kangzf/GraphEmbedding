@@ -221,6 +221,7 @@ class Metric(object):
 
 
 def exp8():
+    # Plot ged and time.
     dataset = 'aids10k'
     models = ['astar', 'beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
               'hungarian', 'vj']
@@ -256,13 +257,13 @@ def exp8_helper(dataset, models, metric):
     plt.grid(linestyle='dashed')
     plt.tight_layout()
     # plt.show()
-    plt.savefig(get_root_path() + '/files/ged_{}_mat_{}_{}.png'.format( \
-        metric, dataset, '_'.join(models)))
+    plt.savefig(get_root_path() + '/files/{}/{}/ged_{}_mat_{}_{}.png'.format( \
+        dataset, metric, metric, dataset, '_'.join(models)))
 
 
 def get_result_mat(metric, dataset, model):
-    file_p = get_root_path() + '/files/ged_{}_mat_{}_{}_*.npy'.format( \
-        metric, dataset, model)
+    file_p = get_root_path() + '/files/{}/{}/ged_{}_mat_{}_{}_*.npy'.format( \
+        dataset, metric, metric, dataset, model)
     li = glob(file_p)
     if len(li) != 1:
         raise RuntimeError('Files for {}: {}'.format(file_p, li))
@@ -272,13 +273,15 @@ def get_result_mat(metric, dataset, model):
 
 def get_test_graph_sizes(dataset):
     test_data = load_data(dataset, train=False)
-    return [g.number_of_nodes() for g in test_data.graphs)]
+    return [g.number_of_nodes() for g in test_data.graphs]
 
 
 def exp9():
+    # Plot ap@k.
     dataset = 'aids10k'
     models = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
               'hungarian', 'vj']
+    metric = 'ap@k'
     true_mat = get_result_mat('ged', dataset, 'beam80')
     ks = []
     k = 1
@@ -303,13 +306,13 @@ def exp9():
     plt.xlabel('k')
     # ax = plt.gca()
     # ax.set_xticks(ks)
-    plt.ylabel('ap@k')
+    plt.ylabel(metric)
     plt.legend(loc='best', ncol=2)
     plt.grid(linestyle='dashed')
     plt.tight_layout()
     # plt.show()
-    plt.savefig(get_root_path() + '/files/ged_{}_{}_{}.png'.format( \
-      'apk', dataset, '_'.join(models)))
+    plt.savefig(get_root_path() + '/files/{}/{}/ged_{}_{}_{}.png'.format( \
+      dataset, metric, metric, dataset, '_'.join(models)))
 
 
 def precision_at_ks(true_mat, pred_mat, ks, print_ids=[]):
@@ -364,7 +367,7 @@ def exp10():
                             train_data.graphs[j]) for j in gids]
         info_dict['plot_save_path'] = \
             get_root_path() + \
-            '/files/query_vis/{}/{}/query_vis_{}_{}_{}.png'.format( \
+            '/files/{}//query_vis/{}/query_vis_{}_{}_{}.png'.format( \
                 dataset, model, dataset, model, i)
         vis(q, gs, info_dict)
 
