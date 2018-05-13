@@ -30,7 +30,7 @@ info_dict = {
 
     # plot config
     'plot_dpi': 200,
-    'plot_save_path': 'plot'
+    'plot_save_path': get_root_path() + '/temp/test_vis.png'
 }
 
 
