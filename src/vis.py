@@ -23,6 +23,11 @@ def info_dict_preprocess(info_dict):
     info_dict.setdefault('plot_dpi', 200)
     info_dict.setdefault('plot_save_path', "")
 
+    info_dict.setdefault('top_space', 0.08)
+    info_dict.setdefault('bottom_space', 0)
+    info_dict.setdefault('hbetween_space', 0.5)
+    info_dict.setdefault('wbetween_space', 0.01)
+        
 
 def calc_subplot_size(area):
     h = int(math.sqrt(area))
@@ -43,7 +48,7 @@ def draw_extra(i, ax, info_dict, text):
     pass
     left = list_safe_get(info_dict['each_graph_text_pos'], 0, 0.5)
     bottom = list_safe_get(info_dict['each_graph_text_pos'], 1, 0.8)
-    print(left, bottom)
+    # print(left, bottom)
     ax.title.set_position([left, bottom])
     ax.set_title(text, fontsize=info_dict['each_graph_text_font_size'])
     plt.axis('off')
@@ -89,14 +94,16 @@ def vis(q=None, gs=None, info_dict=None):
         draw_graph(gs[i], info_dict)
         draw_extra(i, ax, info_dict, list_safe_get(info_dict['each_graph_text_list'], i + 1, ""))
 
+
     # plot setting
     # plt.tight_layout()
     left  = 0.01  # the left side of the subplots of the figure
     right = 0.99    # the right side of the subplots of the figure
-    bottom = 0.05   # the bottom of the subplots of the figure
-    top = 0.95      # the top of the subplots of the figure
-    wspace = 0.02   # the amount of width reserved for blank space between subplots
-    hspace = 0.16   # the amount of height reserved for white space between subplots
+    top = 1 - info_dict['top_space']      # the top of the subplots of the figure
+    bottom = info_dict['bottom_space']   # the bottom of the subplots of the figure
+    wspace = info_dict['wbetween_space']   # the amount of width reserved for blank space between subplots
+    hspace = info_dict['hbetween_space']   # the amount of height reserved for white space between subplots
+
     plt.subplots_adjust(left=left, bottom=bottom, right=right, top=top, wspace=wspace, hspace=hspace)
 
     # save / display
