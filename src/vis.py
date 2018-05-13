@@ -76,7 +76,7 @@ def draw_graph(g, info_dict):
 
 
 def vis(q=None, gs=None, info_dict=None):
-
+    plt.figure()
     info_dict_preprocess(info_dict)
 
     # get num

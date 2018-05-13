@@ -327,19 +327,31 @@ def precision_at_ks(true_r, pred_r, ks, print_ids=[]):
 def exp10():
     # Query visualization.
     dataset = 'aids10k'
-    model = 'beam80'
+    model = 'graph2vec'
     k = 5
     info_dict = {
+        # draw node config
         'draw_node_size': 10,
         'draw_node_label_enable': True,
+        'node_label_name': 'type',
         'draw_node_label_font_size': 8,
         'draw_node_color_map': {'C': 'red',
                                 'O': 'blue',
                                 'N': 'green'},
+        # draw edge config
         'draw_edge_label_enable': True,
+        'edge_label_name': 'valence',
         'draw_edge_label_font_size': 6,
+        # graph text info config
         'each_graph_text_list': [],
-        'each_graph_font_size': 10,
+        'each_graph_text_font_size': 8,
+        'each_graph_text_pos': [0.5, 1.05],
+        # graph padding: value range: [0, 1]
+        'top_space': 0.25,  # out of whole graph
+        'bottom_space': 0,
+        'hbetween_space': 1,  # out of the subgraph
+        'wbetween_space': 0.02,
+        # plot config
         'plot_dpi': 200,
         'plot_save_path': ''
     }
@@ -355,22 +367,32 @@ def exp10():
         gids = ids[i][:k]
         gs = [train_data.graphs[j] for j in gids]
         info_dict['each_graph_text_list'] = \
-            ['query id: {}'.format(q.graph['gid'])] + \
+            [get_text_label(ged_mat, time_mat, i, i, q, model, True)] + \
             [get_text_label(ged_mat, time_mat, i, j, \
-                            train_data.graphs[j]) for j in gids]
+                            train_data.graphs[j], model, False) for j in gids]
         info_dict['plot_save_path'] = \
             get_root_path() + \
-            '/files/{}//query_vis/{}/query_vis_{}_{}_{}.png'.format( \
+            '/files/{}/query_vis/{}/query_vis_{}_{}_{}.png'.format( \
                 dataset, model, dataset, model, i)
         vis(q, gs, info_dict)
 
 
-def get_text_label(ged_mat, time_mat, i, j, g):
-    return 'id: {}\ntrue id: {}\n ged: {}\ntime: {:.5f}sec'.format( \
-        j, g.graph['gid'], ged_mat[i][j], time_mat[i][j])
+def get_text_label(ged_mat, time_mat, i, j, g, model, is_query):
+    rtn = '\n\nid: {}\norig id: {}{}'.format( \
+        j, g.graph['gid'], get_graph_stats_text(g))
+    if is_query:
+        rtn += '\nquery\nmodel: {}'.format(model)
+    else:
+        rtn += '\n ged: {}\ntime: {:.2f} sec'.format( \
+            ged_mat[i][j], time_mat[i][j])
+    return rtn
+
+def get_graph_stats_text(g):
+    return '\n#nodes: {}\n#edges: {}\ndensity: {:.2f}'.format( \
+        g.number_of_nodes(), g.number_of_edges(), nx.density(g))
 
 
 
 
 
-exp8()
+exp10()

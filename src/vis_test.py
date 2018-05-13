@@ -12,7 +12,7 @@ info_dict = {
            'N': 'green'},
    
     # draw edge config
-    'draw_edge_label_enable': False,
+    'draw_edge_label_enable': True,
     'edge_label_name': 'valence',
     'draw_edge_label_font_size': 6,
 
