@@ -85,5 +85,16 @@ def get_ts():
         tstamp = datetime.datetime.now().isoformat()
     return tstamp
 
+
 def get_file_base_id(file):
     return int(file.split('/')[-1].split('.')[0])
+
+
+def load_pkl(handle):
+    import pickle
+    return pickle.load(handle)
+
+
+def save_pkl(obj, handle):
+    import pickle
+    pickle.dump(obj, handle, protocol=pickle.HIGHEST_PROTOCOL)

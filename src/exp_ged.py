@@ -12,15 +12,16 @@ import numpy as np
 from glob import glob
 
 args1 = {'astar': {'color': 'grey'},
-         'beam5': {'color': 'red'},
+         'beam5': {'color': 'deeppink'},
          'beam10': {'color': 'b'},
          'beam20': {'color': 'forestgreen'},
          'beam40': {'color': 'darkorange'},
          'beam80': {'color': 'cyan'},
          'hungarian': {'color': 'deepskyblue'},
-         'vj': {'color': 'red'}}
+         'vj': {'color': 'red'},
+         'graph2vec': {'color': 'darkcyan'}}
 args2 = {'astar': {'marker': '*', 'facecolors': 'none', 'edgecolors': 'grey'},
-         'beam5': {'marker': '|', 'facecolors': 'red'},
+         'beam5': {'marker': '|', 'facecolors': 'deeppink'},
          'beam10': {'marker': '_', 'facecolors': 'b'},
          'beam20': {'marker': 'D', 'facecolors': 'none',
                     'edgecolors': 'forestgreen'},
@@ -29,7 +30,8 @@ args2 = {'astar': {'marker': '*', 'facecolors': 'none', 'edgecolors': 'grey'},
          'beam80': {'marker': 's', 'facecolors': 'none', 'edgecolors': 'cyan'},
          'hungarian': {'marker': 'X', 'facecolors': 'none',
                        'edgecolors': 'deepskyblue'},
-         'vj': {'marker': 'P', 'facecolors': 'none', 'edgecolors': 'red'}}
+         'vj': {'marker': 'P', 'facecolors': 'none', 'edgecolors': 'red'},
+         'graph2vec': {'marker': 'h', 'facecolors': 'none', 'edgecolors': 'darkcyan'}}
 
 
 def exp1():
@@ -270,29 +272,38 @@ def exp9():
     # Plot ap@k.
     dataset = 'aids10k'
     models = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
-              'hungarian', 'vj']
+              'hungarian', 'vj', 'graph2vec']
     true_model = 'beam80'
     metric = 'ap@k'
     rs = load_results_as_dict(dataset, models)
     true_result = rs[true_model]
+
     ks = []
     k = 1
     while k < true_result.ged_mat().shape[1]:
         ks.append(k)
         k *= 2
+    exp9_helper(dataset, models, rs, true_result, metric, ks, True)
+
+    ks = range(1, 31)
+    exp9_helper(dataset, models, rs, true_result, metric, ks, False)
+
+def exp9_helper(dataset, models, rs, true_result, metric, ks, logscale):
     # print_ids = range(true_mat.shape[0])
     print_ids = []
-
     font = {'family': 'serif',
             'size': 22}
     matplotlib.rc('font', **font)
     plt.figure(figsize=(16, 10))
-
     for model in models:
         print(model)
         aps = precision_at_ks(true_result, rs[model], ks, print_ids)
-        #print('aps {}: {}'.format(model, aps))
-        plt.semilogx(ks, aps, **args1[model])
+        # print('aps {}: {}'.format(model, aps))
+        if logscale:
+            pltfunc = plt.semilogx
+        else:
+            pltfunc = plt.plot
+        pltfunc(ks, aps, **args1[model])
         plt.scatter(ks, aps, s=200, label=model, **args2[model])
     plt.xlabel('k')
     # ax = plt.gca()
@@ -302,8 +313,9 @@ def exp9():
     plt.grid(linestyle='dashed')
     plt.tight_layout()
     # plt.show()
-    plt.savefig(get_root_path() + '/files/{}/{}/ged_{}_{}_{}.png'.format( \
-      dataset, metric, metric, dataset, '_'.join(models)))
+    kss = 'k_{}_{}'.format(min(ks), max(ks))
+    plt.savefig(get_root_path() + '/files/{}/{}/ged_{}_{}_{}_{}.png'.format( \
+        dataset, metric, metric, dataset, '_'.join(models), kss))
 
 
 def precision_at_ks(true_r, pred_r, ks, print_ids=[]):
@@ -352,6 +364,8 @@ def exp10():
         'hbetween_space': 1,  # out of the subgraph
         'wbetween_space': 0.02,
         # plot config
+        'each_graph_text_pos': [0.5, 0.8],
+        'each_graph_font_size': 10,
         'plot_dpi': 200,
         'plot_save_path': ''
     }
@@ -390,8 +404,6 @@ def get_text_label(ged_mat, time_mat, i, j, g, model, is_query):
 def get_graph_stats_text(g):
     return '\n#nodes: {}\n#edges: {}\ndensity: {:.2f}'.format( \
         g.number_of_nodes(), g.number_of_edges(), nx.density(g))
-
-
 
 
 
