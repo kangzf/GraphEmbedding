@@ -48,7 +48,7 @@ def draw_extra(i, ax, info_dict, text):
     pass
     left = list_safe_get(info_dict['each_graph_text_pos'], 0, 0.5)
     bottom = list_safe_get(info_dict['each_graph_text_pos'], 1, 0.8)
-    print(left, bottom)
+    # print(left, bottom)
     ax.title.set_position([left, bottom])
     ax.set_title(text, fontsize=info_dict['each_graph_text_font_size'])
     plt.axis('off')
