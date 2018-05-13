@@ -10,13 +10,28 @@ from os.path import isfile
 
 
 class Result(object):
+    def model(self):
+        return self.model_
+
+    def m_n(self):
+        raise NotImplementedError()
+
     def ged_mat(self):
         raise NotImplementedError()
 
     def sim_mat(self):
         raise NotImplementedError()
 
+    def ged_sim(self, qid, gid):
+        raise NotImplementedError()
+
+    def ranking(self, qid, gid):
+        raise NotImplementedError()
+
     def time_mat(self):
+        raise NotImplementedError()
+
+    def time(self, qid, gid):
         raise NotImplementedError()
 
     def mat(self, metric):
@@ -31,12 +46,27 @@ class PairwiseGEDModelResult(Result):
         self.model_ = model
         self.ged_mat_ = self._load_result_mat(dataset, 'ged')
         self.time_mat_ = self._load_result_mat(dataset, 'time')
+        self.ged_sort_id_mat_ = np.argsort(self.ged_mat_)
+
+    def m_n(self):
+        return self.ged_mat_.shape
 
     def ged_mat(self):
         return self.ged_mat_
 
+    def ged_sim(self, qid, gid):
+        return 'ged', self.ged_mat_[qid][gid]
+
+    def ranking(self, qid, gid):
+        finds = np.where(self.ged_sort_id_mat_[qid] == gid)
+        assert (len(finds) == 1 and len(finds[0]) == 1)
+        return finds[0][0]
+
     def time_mat(self):
         return self.time_mat_
+
+    def time(self, qid, gid):
+        return self.time_mat_[qid][gid]
 
     def mat(self, metric):
         if metric == 'ged':
@@ -48,7 +78,7 @@ class PairwiseGEDModelResult(Result):
                 metric, self.model_))
 
     def ged_sort_id_mat(self):
-        return np.argsort(self.ged_mat_)
+        return self.ged_sort_id_mat_
 
     def _load_result_mat(self, dataset, metric):
         file_p = get_root_path() + '/files/{}/{}/ged_{}_mat_{}_{}_*.npy'.format( \
@@ -61,11 +91,17 @@ class PairwiseGEDModelResult(Result):
 
 
 class EmbeddingBasedModelResult(Result):
+    def m_n(self):
+        return self.sim_mat_.shape
+
     def sim_mat(self):
         return self.sim_mat_
 
+    def ged_sim(self, qid, gid):
+        return 'sim', self.sim_mat_[qid][gid]
+
     def ged_sort_id_mat(self):
-        return np.argsort(self.sim_mat_)[:,::-1]
+        return np.argsort(self.sim_mat_)[:, ::-1]
 
 
 class Graph2VecResult(EmbeddingBasedModelResult):
@@ -82,6 +118,9 @@ class Graph2VecResult(EmbeddingBasedModelResult):
         else:
             raise RuntimeError('Unknown metric {} for model {}'.format( \
                 metric, self.model_))
+
+    def time(self, qid, gid):
+        return None
 
     def _load_sim_mat(self):
         fn = get_root_path() + '/files/{}/sim/{}_graph2vec_dim_{}_sim_{}.npy'.format( \

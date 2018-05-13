@@ -340,6 +340,7 @@ def exp10():
     # Query visualization.
     dataset = 'aids10k'
     model = 'graph2vec'
+    true_model = 'beam80'
     k = 5
     info_dict = {
         # draw node config
@@ -364,16 +365,13 @@ def exp10():
         'hbetween_space': 1,  # out of the subgraph
         'wbetween_space': 0.02,
         # plot config
-        'each_graph_text_pos': [0.5, 0.8],
-        'each_graph_font_size': 10,
         'plot_dpi': 200,
         'plot_save_path': ''
     }
     r = load_result(dataset, model)
-    ged_mat = r.ged_mat()
-    time_mat = r.time_mat()
+    tr = load_result(dataset, true_model)
     ids = r.ged_sort_id_mat()
-    m, n = ged_mat.shape
+    m, n = r.m_n()
     train_data = load_data(dataset, train=True)
     test_data = load_data(dataset, train=False)
     for i in range(m):
@@ -381,8 +379,8 @@ def exp10():
         gids = ids[i][:k]
         gs = [train_data.graphs[j] for j in gids]
         info_dict['each_graph_text_list'] = \
-            [get_text_label(ged_mat, time_mat, i, i, q, model, True)] + \
-            [get_text_label(ged_mat, time_mat, i, j, \
+            [get_text_label(r, tr, i, i, q, model, True)] + \
+            [get_text_label(r, tr, i, j, \
                             train_data.graphs[j], model, False) for j in gids]
         info_dict['plot_save_path'] = \
             get_root_path() + \
@@ -391,14 +389,26 @@ def exp10():
         vis(q, gs, info_dict)
 
 
-def get_text_label(ged_mat, time_mat, i, j, g, model, is_query):
-    rtn = '\n\nid: {}\norig id: {}{}'.format( \
-        j, g.graph['gid'], get_graph_stats_text(g))
+def get_text_label(r, tr, qid, gid, g, model, is_query):
+    if r.model == tr.model:
+        rtn = '\n\n'
+    else:
+        rtn = 'true ged: {}\ntrue rank: {}\n'.format(tr.ged_sim(qid, gid)[1], tr.ranking(qid, gid))
+    rtn += 'id: {}\norig id: {}{}'.format( \
+            gid, g.graph['gid'], get_graph_stats_text(g))
     if is_query:
         rtn += '\nquery\nmodel: {}'.format(model)
     else:
-        rtn += '\n ged: {}\ntime: {:.2f} sec'.format( \
-            ged_mat[i][j], time_mat[i][j])
+        ged_sim_str, ged_sim = r.ged_sim(qid, gid)
+        if ged_sim_str == 'ged':
+            rtn += '\n {}: {}\n'.format(ged_sim_str, ged_sim)
+        else:
+            rtn += '\n {}: {:.2f}\n'.format(ged_sim_str, ged_sim)
+        t = r.time(qid, gid)
+        if t:
+            rtn += 'time: {:.2f} sec'.format(t)
+        else:
+            rtn += 'time: -'
     return rtn
 
 def get_graph_stats_text(g):
