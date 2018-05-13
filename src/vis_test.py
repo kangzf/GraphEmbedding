@@ -17,14 +17,22 @@ info_dict = {
     'draw_edge_label_font_size': 6,
 
     # graph text info config
-    'each_graph_text_list': ["testa\ntestb\ntestc\ntestd", "test2", "test3", "test4", "test5", "test6", "test7", "test8", "test9", "test10"],
+    'each_graph_text_list': ["testa\ntestb\ntestc", "test2", "test3", "test4", "test5", "test6", "test7", "test8", "test9", "test10"],
     'each_graph_text_font_size': 8,
-    'each_graph_text_pos': [0.5, 0.8],  # [left, bottom], value range: [0, 1]
+    'each_graph_text_pos': [0.5, 1.05],  # [left, bottom], value range: [0, 1]
+
+    # graph padding: value range: [0, 1]
+    'top_space': 0.1, # out of whole graph
+    'bottom_space': 0,
+ 
+    'hbetween_space': 0.4, # out of the subgraph
+    'wbetween_space': 0.01,
 
     # plot config
     'plot_dpi': 200,
-    'plot_save_path': get_root_path() + '/temp/test_vis.png'
+    'plot_save_path': 'plot'
 }
+
 
 
 test_data = load_data('aids10k', train=False)
