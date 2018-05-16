@@ -16,16 +16,37 @@ class Result(object):
     def m_n(self):
         raise NotImplementedError()
 
-    def ged_mat(self):
+    def ged_mat(self, norm):
         raise NotImplementedError()
 
     def sim_mat(self):
         raise NotImplementedError()
 
-    def ged_sim(self, qid, gid):
+    def ged_sim_mat(self, norm):
         raise NotImplementedError()
 
-    def ranking(self, qid, gid):
+    def ged_sim(self, qid, gid, norm):
+        raise NotImplementedError()
+
+    def top_k_ids(self, qid, k, norm, inclusive):
+        ged_sort_id_mat = self.ged_sort_id_mat(norm)
+        _, n = ged_sort_id_mat.shape
+        if k < 0 or k >= n:
+            raise RuntimeError('Invalid k {}'.format(k))
+        if not inclusive:
+            return ged_sort_id_mat[qid][:k]
+        # Tie inclusive.
+        ged_mat = self.ged_sim_mat(norm)
+        while k < n:
+            cid = ged_sort_id_mat[qid][k - 1]
+            nid = ged_sort_id_mat[qid][k]
+            if ged_mat[qid][cid] == ged_mat[qid][nid]:
+                k += 1
+            else:
+                break
+        return ged_sort_id_mat[qid][:k]
+
+    def ranking(self, qid, gid, norm):
         raise NotImplementedError()
 
     def time_mat(self):
@@ -34,33 +55,59 @@ class Result(object):
     def time(self, qid, gid):
         raise NotImplementedError()
 
-    def mat(self, metric):
+    def mat(self, metric, norm):
         raise NotImplementedError()
 
-    def ged_sort_id_mat(self):
+    def ged_sort_id_mat(self, norm):
         raise NotImplementedError()
 
 
 class PairwiseGEDModelResult(Result):
     def __init__(self, dataset, model):
+        self.dataset = dataset
         self.model_ = model
         self.ged_mat_ = self._load_result_mat(dataset, 'ged')
+        self.ged_norm_mat_ = np.copy(self.ged_mat_)
+        train_data = load_data(self.dataset, True)
+        test_data = load_data(self.dataset, False)
+        m, n = self.ged_mat_.shape
+        for i in range(m):
+            lm = test_data.graphs[i].number_of_nodes()
+            for j in range(n):
+                ln = train_data.graphs[j].number_of_nodes()
+                self.ged_norm_mat_[i][j] = 2 * self.ged_mat_[i][j] / (lm + ln)
         self.time_mat_ = self._load_result_mat(dataset, 'time')
-        self.ged_sort_id_mat_ = np.argsort(self.ged_mat_)
+        self.ged_sort_id_mat_ = np.argsort(self.ged_mat_, kind='mergesort')
+        self.ged_norm_sort_id_mat_ = np.argsort(self.ged_norm_mat_, kind='mergesort')
 
     def m_n(self):
         return self.ged_mat_.shape
 
-    def ged_mat(self):
-        return self.ged_mat_
+    def ged_mat(self, norm):
+        return self._select_ged_mat(norm)
 
-    def ged_sim(self, qid, gid):
-        return 'ged', self.ged_mat_[qid][gid]
+    def ged_sim_mat(self, norm):
+        return self.ged_mat(norm)
 
-    def ranking(self, qid, gid):
-        finds = np.where(self.ged_sort_id_mat_[qid] == gid)
+    def ged_sim(self, qid, gid, norm):
+        return 'ged', self._select_ged_mat(norm)[qid][gid]
+
+    def ranking(self, qid, gid, norm):
+        # Assume self is ground truth.
+        ged_sort_id_mat = self.ged_sort_id_mat(norm)
+        ged_mat = self.ged_mat(norm)
+        finds = np.where(ged_sort_id_mat[qid] == gid)
         assert (len(finds) == 1 and len(finds[0]) == 1)
-        return finds[0][0]
+        fid = finds[0][0]
+        # Tie inclusive (always when find ranking).
+        while fid > 0:
+            cid = ged_sort_id_mat[qid][fid]
+            pid = ged_sort_id_mat[qid][fid - 1]
+            if ged_mat[qid][pid] == ged_mat[qid][cid]:
+                fid -= 1
+            else:
+                break
+        return fid + 1 # 1-based
 
     def time_mat(self):
         return self.time_mat_
@@ -68,17 +115,17 @@ class PairwiseGEDModelResult(Result):
     def time(self, qid, gid):
         return self.time_mat_[qid][gid]
 
-    def mat(self, metric):
+    def mat(self, metric, norm):
         if metric == 'ged':
-            return self.ged_mat_
+            return self._select_ged_mat(norm)
         elif metric == 'time':
             return self.time_mat_
         else:
             raise RuntimeError('Unknown metric {} for model {}'.format( \
                 metric, self.model_))
 
-    def ged_sort_id_mat(self):
-        return self.ged_sort_id_mat_
+    def ged_sort_id_mat(self, norm):
+        return self._select_ged_sort_id_mat(norm)
 
     def _load_result_mat(self, dataset, metric):
         file_p = get_root_path() + '/files/{}/{}/ged_{}_mat_{}_{}_*.npy'.format( \
@@ -89,6 +136,12 @@ class PairwiseGEDModelResult(Result):
         file = li[0]
         return np.load(file)
 
+    def _select_ged_mat(self, norm):
+        return self.ged_norm_mat_ if norm else self.ged_mat_
+
+    def _select_ged_sort_id_mat(self, norm):
+        return self.ged_norm_sort_id_mat_ if norm else self.ged_sort_id_mat_
+
 
 class EmbeddingBasedModelResult(Result):
     def m_n(self):
@@ -97,22 +150,26 @@ class EmbeddingBasedModelResult(Result):
     def sim_mat(self):
         return self.sim_mat_
 
-    def ged_sim(self, qid, gid):
+    def ged_sim_mat(self, *unused):
+        raise self.sim_mat()
+
+    def ged_sim(self, qid, gid, *unused):
         return 'sim', self.sim_mat_[qid][gid]
 
-    def ged_sort_id_mat(self):
-        return np.argsort(self.sim_mat_)[:, ::-1]
+    def ged_sort_id_mat(self, *unused):
+        return np.argsort(self.sim_mat_, kind='mergesort')[:, ::-1]
 
 
 class Graph2VecResult(EmbeddingBasedModelResult):
     def __init__(self, dataset, model, sim):
         self.dim = 1024
-        self.model = model
+        self.model_ = model
         self.dataset = dataset
         self.sim = sim
         self.sim_mat_ = self._load_sim_mat()
+        self.ged_sort_id_mat_ = self.ged_sort_id_mat()
 
-    def mat(self, metric):
+    def mat(self, metric, *unused):
         if metric == 'sim':
             return self.sim_mat_
         else:

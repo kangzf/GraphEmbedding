@@ -31,7 +31,8 @@ args2 = {'astar': {'marker': '*', 'facecolors': 'none', 'edgecolors': 'grey'},
          'hungarian': {'marker': 'X', 'facecolors': 'none',
                        'edgecolors': 'deepskyblue'},
          'vj': {'marker': 'P', 'facecolors': 'none', 'edgecolors': 'red'},
-         'graph2vec': {'marker': 'h', 'facecolors': 'none', 'edgecolors': 'darkcyan'}}
+         'graph2vec': {'marker': 'h', 'facecolors': 'none',
+                       'edgecolors': 'darkcyan'}}
 
 
 def exp1():
@@ -180,7 +181,7 @@ def exp6():
 
 def exp7():
     dataset = 'aids10k'
-    model = 'vj'
+    model = 'astar'
     train_data = load_data(dataset, True)
     test_data = load_data(dataset, False)
     m = len(test_data.graphs)
@@ -275,20 +276,23 @@ def exp9():
               'hungarian', 'vj', 'graph2vec']
     true_model = 'beam80'
     metric = 'ap@k'
-    rs = load_results_as_dict(dataset, models)
-    true_result = rs[true_model]
+    norms = [True, False]
+    for norm in norms:
+        rs = load_results_as_dict(dataset, models)
+        true_result = rs[true_model]
 
-    ks = []
-    k = 1
-    while k < true_result.ged_mat().shape[1]:
-        ks.append(k)
-        k *= 2
-    exp9_helper(dataset, models, rs, true_result, metric, ks, True)
+        ks = []
+        k = 1
+        while k < true_result.ged_mat(norm).shape[1]:
+            ks.append(k)
+            k *= 2
+        exp9_helper(dataset, models, rs, true_result, metric, norm, ks, True)
 
-    ks = range(1, 31)
-    exp9_helper(dataset, models, rs, true_result, metric, ks, False)
+        ks = range(1, 31)
+        exp9_helper(dataset, models, rs, true_result, metric, norm, ks, False)
 
-def exp9_helper(dataset, models, rs, true_result, metric, ks, logscale):
+
+def exp9_helper(dataset, models, rs, true_result, metric, norm, ks, logscale):
     # print_ids = range(true_mat.shape[0])
     print_ids = []
     font = {'family': 'serif',
@@ -297,7 +301,7 @@ def exp9_helper(dataset, models, rs, true_result, metric, ks, logscale):
     plt.figure(figsize=(16, 10))
     for model in models:
         print(model)
-        aps = precision_at_ks(true_result, rs[model], ks, print_ids)
+        aps = precision_at_ks(true_result, rs[model], norm, ks, print_ids)
         # print('aps {}: {}'.format(model, aps))
         if logscale:
             pltfunc = plt.semilogx
@@ -309,28 +313,36 @@ def exp9_helper(dataset, models, rs, true_result, metric, ks, logscale):
     # ax = plt.gca()
     # ax.set_xticks(ks)
     plt.ylabel(metric)
+    plt.ylim([-0.06, 1.06])
     plt.legend(loc='best', ncol=2)
     plt.grid(linestyle='dashed')
     plt.tight_layout()
     # plt.show()
     kss = 'k_{}_{}'.format(min(ks), max(ks))
-    plt.savefig(get_root_path() + '/files/{}/{}/ged_{}_{}_{}_{}.png'.format( \
-        dataset, metric, metric, dataset, '_'.join(models), kss))
+    sp = get_root_path() + '/files/{}/{}/ged_{}_{}_{}_{}_{}.png'.format( \
+        dataset, metric, metric, dataset, '_'.join(models), kss,
+        get_norm_str(norm))
+    plt.savefig(sp)
+    print('Saved to {}'.format(sp))
 
 
-def precision_at_ks(true_r, pred_r, ks, print_ids=[]):
-    true_ids = true_r.ged_sort_id_mat()
-    # print(x)
-    pred_ids = pred_r.ged_sort_id_mat()
-    # print(y)
-    m, n = true_ids.shape
-    assert (true_ids.shape == pred_ids.shape)
+def get_norm_str(norm):
+    if norm:
+        return 'norm'
+    else:
+        return 'nonorm'
+
+
+def precision_at_ks(true_r, pred_r, norm, ks, print_ids=[]):
+    m, n = true_r.m_n()
+    assert (true_r.m_n() == pred_r.m_n())
     ps = np.zeros((m, len(ks)))
     for i in range(m):
         for k_idx, k in enumerate(ks):
             assert (type(k) is int and k > 0 and k < n)
-            ps[i][k_idx] = len(set(true_ids[i][:k]).intersection( \
-                pred_ids[i][:k])) / k
+            true_ids = true_r.top_k_ids(i, k, norm, inclusive=True)
+            pred_ids = pred_r.top_k_ids(i, k, norm, inclusive=False)
+            ps[i][k_idx] = len(set(true_ids).intersection(set(pred_ids))) / k
         if i in print_ids:
             print('query {}\nks:    {}\nprecs: {}'.format(i, ks, ps[i]))
     return np.mean(ps, axis=0)
@@ -341,6 +353,7 @@ def exp10():
     dataset = 'aids10k'
     model = 'graph2vec'
     true_model = 'beam80'
+    norms = [True, False]
     k = 5
     info_dict = {
         # draw node config
@@ -370,38 +383,43 @@ def exp10():
     }
     r = load_result(dataset, model)
     tr = load_result(dataset, true_model)
-    ids = r.ged_sort_id_mat()
-    m, n = r.m_n()
-    train_data = load_data(dataset, train=True)
-    test_data = load_data(dataset, train=False)
-    for i in range(m):
-        q = test_data.graphs[i]
-        gids = ids[i][:k]
-        gs = [train_data.graphs[j] for j in gids]
-        info_dict['each_graph_text_list'] = \
-            [get_text_label(r, tr, i, i, q, model, True)] + \
-            [get_text_label(r, tr, i, j, \
-                            train_data.graphs[j], model, False) for j in gids]
-        info_dict['plot_save_path'] = \
-            get_root_path() + \
-            '/files/{}/query_vis/{}/query_vis_{}_{}_{}.png'.format( \
-                dataset, model, dataset, model, i)
-        vis(q, gs, info_dict)
+    for norm in norms:
+        ids = r.ged_sort_id_mat(norm)
+        m, n = r.m_n()
+        train_data = load_data(dataset, train=True)
+        test_data = load_data(dataset, train=False)
+        for i in range(m):
+            q = test_data.graphs[i]
+            gids = ids[i][:k]
+            gs = [train_data.graphs[j] for j in gids]
+            info_dict['each_graph_text_list'] = \
+                [get_text_label(r, tr, i, i, q, model, norm, True)] + \
+                [get_text_label(r, tr, i, j, \
+                                train_data.graphs[j], model, norm, False) \
+                 for j in gids]
+            info_dict['plot_save_path'] = \
+                get_root_path() + \
+                '/files/{}/query_vis/{}/query_vis_{}_{}_{}_{}.png'.format( \
+                    dataset, model, dataset, model, i, get_norm_str(norm))
+            vis(q, gs, info_dict)
 
 
-def get_text_label(r, tr, qid, gid, g, model, is_query):
-    if r.model == tr.model:
+def get_text_label(r, tr, qid, gid, g, model, norm, is_query):
+    if is_query or r.model_ == tr.model_:
         rtn = '\n\n'
     else:
-        rtn = 'true ged: {}\ntrue rank: {}\n'.format(tr.ged_sim(qid, gid)[1], tr.ranking(qid, gid))
+        ged_str = get_ged_select_norm_str(tr, qid, gid, norm)
+        rtn = 'true ged: {}\ntrue rank: {}\n'.format( \
+            ged_str, tr.ranking(qid, gid, norm))
     rtn += 'id: {}\norig id: {}{}'.format( \
-            gid, g.graph['gid'], get_graph_stats_text(g))
+        gid, g.graph['gid'], get_graph_stats_text(g))
     if is_query:
         rtn += '\nquery\nmodel: {}'.format(model)
     else:
-        ged_sim_str, ged_sim = r.ged_sim(qid, gid)
+        ged_sim_str, ged_sim = r.ged_sim(qid, gid, norm)
         if ged_sim_str == 'ged':
-            rtn += '\n {}: {}\n'.format(ged_sim_str, ged_sim)
+            ged_str = get_ged_select_norm_str(r, qid, gid, norm)
+            rtn += '\n {}: {}\n'.format(ged_sim_str, ged_str)
         else:
             rtn += '\n {}: {:.2f}\n'.format(ged_sim_str, ged_sim)
         t = r.time(qid, gid)
@@ -411,10 +429,19 @@ def get_text_label(r, tr, qid, gid, g, model, is_query):
             rtn += 'time: -'
     return rtn
 
+
+def get_ged_select_norm_str(r, qid, gid, norm):
+    ged = r.ged_sim(qid, gid, norm=False)[1]
+    norm_ged = r.ged_sim(qid, gid, norm=True)[1]
+    if norm:
+        return '{:.2f} ({})'.format(norm_ged, ged)
+    else:
+        return '{} ({:.2f})'.format(ged, norm_ged)
+
+
 def get_graph_stats_text(g):
     return '\n#nodes: {}\n#edges: {}\ndensity: {:.2f}'.format( \
         g.number_of_nodes(), g.number_of_edges(), nx.density(g))
 
 
-
-exp10()
+exp7()
