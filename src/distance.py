@@ -2,6 +2,12 @@ from utils import get_root_path, exec, get_ts
 from nx_to_gxl import nx_to_gxl
 import fileinput
 
+
+def mcs(g1, g2):
+    # TODO: implementation by Hao Ding
+    return 0
+
+
 def hungarian_ged(g1, g2):
     # # https://github.com/Jacobe2169/ged4py
     # return graph_edit_dist.compare(g1, g2)
@@ -31,8 +37,8 @@ def ged(g1, g2, algo):
             'Different meta data {} vs {}'.format(meta1, meta2))
     setup_property_file(src, gp, meta1)
     if not exec(
-        'cd {} && java -classpath {}/src/graph-matching-toolkit/bin algorithms.GraphMatching ./properties/properties_temp_{}.prop'.format(
-            gp, get_root_path(), get_ts())):
+            'cd {} && java -classpath {}/src/graph-matching-toolkit/bin algorithms.GraphMatching ./properties/properties_temp_{}.prop'.format(
+                gp, get_root_path(), get_ts())):
         return -1
     return get_result(gp, algo)
 
@@ -73,3 +79,13 @@ def get_result(gp, algo):
 
 def get_gmt_path():
     return get_root_path() + '/src/graph-matching-toolkit'
+
+
+if __name__ == '__main__':
+    from utils import load_data
+
+    test_data = load_data('aids10k', train=False)
+    train_data = load_data('aids10k', train=True)
+    g1 = train_data.graphs[0]
+    g2 = test_data.graphs[0]
+    print(mcs(g1, g2))
