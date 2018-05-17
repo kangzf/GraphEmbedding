@@ -44,6 +44,7 @@ def exec(cmd, timeout=None):
         from os import system
         print(cmd)
         system(cmd)
+        return True # finished
     else:
         import subprocess as sub
         import threading
