@@ -1,5 +1,6 @@
 from utils import get_root_path, exec, get_ts
 from nx_to_gxl import nx_to_gxl
+from os.path import isfile
 import fileinput
 
 
@@ -38,7 +39,7 @@ def ged(g1, g2, algo):
     setup_property_file(src, gp, meta1)
     if not exec(
             'cd {} && java -classpath {}/src/graph-matching-toolkit/bin algorithms.GraphMatching ./properties/properties_temp_{}.prop'.format(
-                gp, get_root_path(), get_ts()), timeout=1000):
+                gp, get_root_path(), get_ts())):
         return -1
     return get_result(gp, algo)
 
@@ -46,16 +47,31 @@ def ged(g1, g2, algo):
 def setup_temp_folder(gp):
     tp = gp + '/data/temp_' + get_ts()
     exec('rm -rf {} && mkdir {}'.format(tp, tp))
-    src = get_root_path() + '/src/gmk_files'
+    src = get_root_path() + '/src/gmt_files'
     exec('cp {}/temp.xml {}/temp_{}.xml'.format(src, tp, get_ts()))
     return src, tp
 
 
 def setup_property_file(src, gp, meta):
-    file = '{}/properties/properties_temp_{}.prop'.format(gp, get_ts())
-    exec('cp {}/{}.prop {}'.format(src, meta, file))
-    for line in fileinput.input(file, inplace=True):
-        print(line.rstrip().replace('temp', 'temp_' + get_ts()))
+    destfile = '{}/properties/properties_temp_{}.prop'.format(gp, get_ts())
+    srcfile = '{}/{}.prop'.format(src, meta)
+    if not isfile(srcfile):
+        if 'beam' in meta: # for beam
+            metasp = meta.split('_')
+            s = int(metasp[0][4:])
+            if s <= 0:
+                raise RuntimeError('Invalid s for beam search: {}'.format(s))
+            newmeta = '_'.join(['beam'] + metasp[1:])
+            srcfile = '{}/{}.prop'.format(src, newmeta)
+        else:
+            raise RuntimeError('File {} does not exist'.format(srcfile))
+    exec('cp {} {}'.format(srcfile, destfile))
+    for line in fileinput.input(destfile, inplace=True):
+        line = line.rstrip()
+        if line == 's=': # for beam
+            print('s={}'.format(s))
+        else:
+            print(line.replace('temp', 'temp_' + get_ts()))
 
 
 def write_to_temp(g, tp, algo, g_name):
@@ -92,6 +108,11 @@ if __name__ == '__main__':
 
     g1 = test_data.graphs[15]
     g2 = train_data.graphs[761]
-    print(beam_ged(g1, g2, 80))
+    import networkx as nx
 
-
+    # nx.write_gexf(g1, get_root_path() + '/temp/g1.gexf')
+    # nx.write_gexf(g2, get_root_path() + '/temp/g2.gexf')
+    g1 = nx.read_gexf(get_root_path() + '/temp/g1_small.gexf')
+    g2 = nx.read_gexf(get_root_path() + '/temp/g2_small.gexf')
+    print(astar_ged(g1, g2))
+    print(beam_ged(g1, g2, 2))
