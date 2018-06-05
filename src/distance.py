@@ -2,14 +2,17 @@ from utils import get_root_path, exec, get_ts
 from nx_to_gxl import nx_to_gxl
 from os.path import isfile
 import fileinput
-
+import networkx as nx
 
 def mcs(g1, g2):
     nx.write_gexf(g1, 'temp_1.gexf')
     nx.write_gexf(g2, 'temp_2.gexf')
-
-    exec('source activate graphembedding && python mcs_cal.py')
-
+    # Force using bash instead of dash.
+    # `source activate` does not work on dash.
+    # graphembedding is a virtual python environment with networkx==2.0.
+    # By default networkx==1.10 is assumed.
+    cmd = 'source activate graphembedding && python mcs_cal.py'
+    exec('/bin/bash -c "{}"'.format(cmd))
     f = open('mcs_result.txt','r')
     return int(f.read())
     return 0
@@ -18,6 +21,7 @@ def mcs(g1, g2):
 def hungarian_ged(g1, g2):
     # # https://github.com/Jacobe2169/ged4py
     # return graph_edit_dist.compare(g1, g2)
+    # ged4py has a bug. Use gmt instead as below.
     return ged(g1, g2, 'hungarian')
 
 
@@ -112,13 +116,12 @@ if __name__ == '__main__':
     g2 = test_data.graphs[0]
     print(mcs(g1, g2))
 
-    g1 = test_data.graphs[15]
-    g2 = train_data.graphs[761]
-    import networkx as nx
-
-    # nx.write_gexf(g1, get_root_path() + '/temp/g1.gexf')
-    # nx.write_gexf(g2, get_root_path() + '/temp/g2.gexf')
-    g1 = nx.read_gexf(get_root_path() + '/temp/g1_small.gexf')
-    g2 = nx.read_gexf(get_root_path() + '/temp/g2_small.gexf')
-    print(astar_ged(g1, g2))
-    print(beam_ged(g1, g2, 2))
+    # g1 = test_data.graphs[15]
+    # g2 = train_data.graphs[761]
+    #
+    # # nx.write_gexf(g1, get_root_path() + '/temp/g1.gexf')
+    # # nx.write_gexf(g2, get_root_path() + '/temp/g2.gexf')
+    # g1 = nx.read_gexf(get_root_path() + '/temp/g1_small.gexf')
+    # g2 = nx.read_gexf(get_root_path() + '/temp/g2_small.gexf')
+    # print(astar_ged(g1, g2))
+    # print(beam_ged(g1, g2, 2))
