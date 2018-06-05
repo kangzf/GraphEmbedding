@@ -5,7 +5,13 @@ import fileinput
 
 
 def mcs(g1, g2):
-    # TODO: implementation by Hao Ding
+    nx.write_gexf(g1, 'temp_1.gexf')
+    nx.write_gexf(g2, 'temp_2.gexf')
+
+    exec('source activate graphembedding && python mcs_cal.py')
+
+    f = open('mcs_result.txt','r')
+    return int(f.read())
     return 0
 
 
