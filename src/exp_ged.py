@@ -1,4 +1,4 @@
-from utils import get_root_path, load_data, get_ts
+from utils import get_root_path, get_result_path, load_data, get_ts
 from distance import astar_ged, beam_ged, hungarian_ged, vj_ged, ged
 from result import load_results_as_dict, load_result
 from vis import vis
@@ -180,6 +180,7 @@ def exp6():
 
 
 def exp7():
+    # Run baselines. Take a while.
     dataset = 'aids10k'
     model = 'astar'
     train_data = load_data(dataset, True)
@@ -187,13 +188,14 @@ def exp7():
     m = len(test_data.graphs)
     n = len(train_data.graphs)
     ged_mat = np.zeros((m, n))
-    time_mat = np.zeros((n, n))
-    outdir = get_root_path() + '/files'
-    file = open('{}/ged_{}_{}_{}.csv'.format( \
+    time_mat = np.zeros((m, n))
+    outdir = '{}/{}'.format(get_result_path(), dataset)
+    file = open('{}/csv/ged_{}_{}_{}.csv'.format( \
         outdir, dataset, model, get_ts()), 'w')
     print_and_log('i,j,i_node,j_node,i_edge,j_edge,ged,time', file)
     for i in range(m):
         for j in range(n):
+            print('----- progress: {}/{}'.format(i * n + j, m * n))
             g1 = test_data.graphs[i]
             g2 = train_data.graphs[j]
             t = time()
@@ -209,9 +211,9 @@ def exp7():
             ged_mat[i][j] = d
             time_mat[i][j] = t
     file.close()
-    np.save('{}/ged_ged_mat_{}_{}_{}'.format( \
+    np.save('{}/ged/ged_ged_mat_{}_{}_{}'.format( \
         outdir, dataset, model, get_ts()), ged_mat)
-    np.save('{}/ged_time_mat_{}_{}_{}'.format( \
+    np.save('{}/time/ged_time_mat_{}_{}_{}'.format( \
         outdir, dataset, model, get_ts()), time_mat)
 
 

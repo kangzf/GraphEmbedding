@@ -1,6 +1,6 @@
 def get_model_fun(model, train):
     import sys
-    sys.path.insert(0, get_root_path())
+    sys.path.insert(0, get_root_path() + '/models')
     if model == 'iwge':
         if train:
             from IWGE.src.train import train
@@ -28,6 +28,14 @@ def get_root_path():
     return dirname(dirname(abspath(__file__)))
 
 
+def get_save_path():
+    return get_root_path() + '/save'
+
+
+def get_result_path():
+    return get_root_path() + '/result'
+
+
 def draw_graph(g, file):
     import matplotlib
     matplotlib.use("Agg")
@@ -44,7 +52,7 @@ def exec(cmd, timeout=None):
         from os import system
         print(cmd)
         system(cmd)
-        return True # finished
+        return True  # finished
     else:
         import subprocess as sub
         import threading
@@ -91,6 +99,55 @@ def get_file_base_id(file):
     return int(file.split('/')[-1].split('.')[0])
 
 
+def sorted_nicely(l):
+    def tryint(s):
+        try:
+            return int(s)
+        except:
+            return s
+
+    import re
+    def alphanum_key(s):
+        return [tryint(c) for c in re.split('([0-9]+)', s)]
+
+    return sorted(l, key=alphanum_key)
+
+
+def save_as_dict(filepath, *args, **kwargs):
+    '''
+    Warn: To use this function, make sure to call it in ONE line, e.g.
+    save_as_dict('some_path', some_object, another_object)
+    Moreover, comma (',') is not allowed in the filepath.
+    '''
+    import inspect
+    from collections import OrderedDict
+    frames = inspect.getouterframes(inspect.currentframe())
+    frame = frames[1]
+    string = inspect.getframeinfo(frame[0]).code_context[0].strip()
+    dict_to_save = OrderedDict()
+    all_args_strs = string[string.find('(') + 1:-1].split(',')
+    if 1 + len(args) + len(kwargs) != len(all_args_strs):
+        msgs = ['Did you call this function in one line?', \
+                'Did the arguments have comma "," in the middle?']
+        raise RuntimeError('\n'.join(msgs))
+    for i, name in enumerate(all_args_strs[1:]):
+        if name.find('=') != -1:
+            name = name.split('=')[1]
+        name = name.strip()
+        if i >= 0 and i < len(args):
+            dict_to_save[name] = args[i]
+        else:
+            break
+    dict_to_save.update(kwargs)
+    print('Saving a dictionary as pickle to {}'.format(filepath))
+    save(filepath, dict_to_save)
+
+
+def load_as_dict(filepath):
+    print('Loading a dictionary as pickle from {}'.format(filepath))
+    return load(filepath)
+
+
 def load_pkl(handle):
     import pickle
     return pickle.load(handle)
@@ -101,3 +158,25 @@ def save_pkl(obj, handle):
     pickle.dump(obj, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
+def save(filepath, obj):
+    with open(proc_filepath(filepath), 'wb') as handle:
+        save_pkl(obj, handle)
+
+
+def load(filepath):
+    from os.path import isfile
+    filepath = proc_filepath(filepath)
+    if isfile(filepath):
+        with open(filepath, 'rb') as handle:
+            return load_pkl(handle)
+    else:
+        return None
+
+
+def proc_filepath(filepath):
+    if type(filepath) is not str:
+        raise RuntimeError('Did you pass a file path to this function?')
+    ext = '.pickle'
+    if ext not in filepath:
+        filepath += ext
+    return filepath

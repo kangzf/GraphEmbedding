@@ -1,12 +1,13 @@
 import sys
 
 sys.path.append('..')
-from utils import get_root_path, exec, get_file_base_id
+from utils import get_root_path, exec, get_file_base_id, load_data, \
+    save_as_dict, load_as_dict, get_save_path
 import networkx as nx
 from glob import glob
 from collections import defaultdict
 import random
-from random import sample
+from random import sample, shuffle
 
 random.seed(123)
 
@@ -80,40 +81,81 @@ def get_old_aids_id():
     files = glob(get_root_path() + '/data/AIDS_old/data/*.gxl')
     return [get_file_base_id(file) for file in files]
 
-def gen_aids10k():
+
+def gen_aids10k(additional=False):
     datadir = get_root_path() + '/data'
     dirin = datadir + '/AIDS'
-    graphs = {}
-    nodes_graphs = defaultdict(list)
-    lesseq30 = set()
-    disconnects = set()
-    for file in glob(dirin + '/*.gexf'):
-        gid = int(file.split('/')[-1].split('.')[0])
-        g = nx.read_gexf(file)
-        if not nx.is_connected(g):
-            print('{} not connected'.format(gid))
-            disconnects.add(gid)
-            continue
-        graphs[gid] = g
-        nodes_graphs[g.number_of_nodes()].append(gid)
-        if g.number_of_nodes() <= 30:
-            lesseq30.add(gid)
-    print(len(disconnects), disconnects)
+    sfn = get_save_path() + '/aids_orig'
+    loaded = load_as_dict(sfn)
+    if not loaded:
+        graphs = {}
+        nodes_graphs = defaultdict(list)
+        lesseq30 = set()
+        disconnects = set()
+        # Iterate through all 40k graphs.
+        for file in glob(dirin + '/*.gexf'):
+            gid = int(file.split('/')[-1].split('.')[0])
+            g = nx.read_gexf(file)
+            if not nx.is_connected(g):
+                print('{} not connected'.format(gid))
+                disconnects.add(gid)
+                continue
+            graphs[gid] = g
+            nodes_graphs[g.number_of_nodes()].append(gid)
+            if g.number_of_nodes() <= 30:
+                lesseq30.add(gid)
+        save_as_dict(sfn, graphs, nodes_graphs, lesseq30, disconnects)
+    else:
+        graphs = loaded['graphs']
+        nodes_graphs = loaded['nodes_graphs']
+        lesseq30 = loaded['lesseq30']
+        disconnects = loaded['disconnects']
+    print(len(disconnects), 'disconnected graphs out of', len(graphs))
     # exit(1)
     # print(nodes_graphs[222])
     # print(nodes_graphs[2])
     train_dir = '{}/AIDS10k/train'.format(datadir)
-    test_dir = '{}/AIDS10k/test'.format(datadir)
-    exec('mkdir -p {}'.format(train_dir))
+    if additional:
+        train_data = load_data('aids10k', train=True)
+        test_dir_str = 'test2'
+    else:
+        exec('mkdir -p {}'.format(train_dir))
+        test_dir_str = 'test'
+    test_dir = '{}/AIDS10k/{}'.format(datadir, test_dir_str)
     exec('mkdir -p {}'.format(test_dir))
-    for num_node in range(5, 23):
-        choose = sample(nodes_graphs[num_node], 1)[0]
-        print('choose {} with {} nodes'.format(choose, num_node))
-        nx.write_gexf(graphs[choose], test_dir + '/{}.gexf'.format(choose))
-        lesseq30.remove(choose)
-    for tid in sample(lesseq30, 10000):
-        nx.write_gexf(graphs[tid], train_dir + '/{}.gexf'.format(tid))
+    if not additional:
+        for num_node in range(5, 23):
+            choose = sample(nodes_graphs[num_node], 1)[0]
+            print('choose {} with {} nodes'.format(choose, num_node))
+            nx.write_gexf(graphs[choose], test_dir + '/{}.gexf'.format(choose))
+            lesseq30.remove(choose)
+        for tid in sample(lesseq30, 10000):
+            nx.write_gexf(graphs[tid], train_dir + '/{}.gexf'.format(tid))
+    else:
+        for num_node in range(5, 30):
+            k = 4
+            from_li = nodes_graphs[num_node]
+            print('sampling {} from {} (size={})'.format(k, len(from_li),
+                                                         num_node))
+            choose = sample_exclude(from_li, k, train_data.get_gids())
+            print('choose {} with {} nodes'.format(choose, num_node))
+            for c in choose:
+                nx.write_gexf(graphs[c], test_dir + '/{}.gexf'.format(c))
     print('Done')
 
 
-gen_aids10k()
+def sample_exclude(from_li, k, exclude):
+    rtn = set()
+    shuffle(from_li)
+    idx = 0
+    for i in range(k):
+        while True:
+            c = from_li[idx]
+            idx += 1
+            if c not in rtn and c not in exclude:
+                rtn.add(c)
+                break
+    return rtn
+
+
+gen_aids10k(additional=True)

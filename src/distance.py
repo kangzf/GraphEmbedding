@@ -49,7 +49,7 @@ def ged(g1, g2, algo):
     setup_property_file(src, gp, meta1)
     if not exec(
             'cd {} && java -classpath {}/src/graph-matching-toolkit/bin algorithms.GraphMatching ./properties/properties_temp_{}.prop'.format(
-                gp, get_root_path(), get_ts())):
+                gp, get_root_path(), get_ts(), timeout=1000)):
         return -1
     return get_result(gp, algo)
 
