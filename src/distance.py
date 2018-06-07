@@ -1,6 +1,8 @@
 from utils import get_root_path, exec, get_ts
 from nx_to_gxl import nx_to_gxl
 from os.path import isfile
+from os import getpid
+from time import time
 import fileinput
 import networkx as nx
 
@@ -37,8 +39,10 @@ def vj_ged(g1, g2):
     return ged(g1, g2, 'vj')
 
 
-def ged(g1, g2, algo):
+def ged(g1, g2, algo, timeit=False):
     # https://github.com/dan-zam/graph-matching-toolkit
+    if timeit:
+        t = time()
     gp = get_gmt_path()
     src, tp = setup_temp_folder(gp)
     meta1 = write_to_temp(g1, tp, algo, 'g1')
@@ -48,22 +52,27 @@ def ged(g1, g2, algo):
             'Different meta data {} vs {}'.format(meta1, meta2))
     setup_property_file(src, gp, meta1)
     if not exec(
-            'cd {} && java -classpath {}/src/graph-matching-toolkit/bin algorithms.GraphMatching ./properties/properties_temp_{}.prop'.format(
-                gp, get_root_path(), get_ts(), timeout=1000)):
-        return -1
-    return get_result(gp, algo)
+            'cd {} && java -classpath {}/src/graph-matching-toolkit/bin algorithms.GraphMatching ./properties/properties_temp_{}_{}.prop'.format(
+                gp, get_root_path(), get_ts(), getpid(), timeout=1000)):
+        rtn = -1
+    else:
+        rtn = get_result(gp, algo)
+    if timeit:
+        rtn = (rtn, time() - t)
+    return rtn
 
 
 def setup_temp_folder(gp):
-    tp = gp + '/data/temp_' + get_ts()
+    tp = gp + '/data/temp_{}_{}'.format(get_ts(), getpid())
     exec('rm -rf {} && mkdir {}'.format(tp, tp))
     src = get_root_path() + '/src/gmt_files'
-    exec('cp {}/temp.xml {}/temp_{}.xml'.format(src, tp, get_ts()))
+    exec('cp {}/temp.xml {}/temp_{}_{}.xml'.format(src, tp, get_ts(), getpid()))
     return src, tp
 
 
 def setup_property_file(src, gp, meta):
-    destfile = '{}/properties/properties_temp_{}.prop'.format(gp, get_ts())
+    destfile = '{}/properties/properties_temp_{}_{}.prop'.format( \
+        gp, get_ts(), getpid())
     srcfile = '{}/{}.prop'.format(src, meta)
     if not isfile(srcfile):
         if 'beam' in meta: # for beam
@@ -81,7 +90,7 @@ def setup_property_file(src, gp, meta):
         if line == 's=': # for beam
             print('s={}'.format(s))
         else:
-            print(line.replace('temp', 'temp_' + get_ts()))
+            print(line.replace('temp', 'temp_{}_{}'.format(get_ts(), getpid())))
 
 
 def write_to_temp(g, tp, algo, g_name):
@@ -92,7 +101,7 @@ def write_to_temp(g, tp, algo, g_name):
 
 
 def get_result(gp, algo):
-    with open('{}/result/temp_{}'.format(gp, get_ts())) as f:
+    with open('{}/result/temp_{}_{}'.format(gp, get_ts(), getpid())) as f:
         lines = f.readlines()
         ln = 23 if 'beam' in algo else 22
         rtn = float(lines[ln]) * 2  # alpha=0.5 --> / 2

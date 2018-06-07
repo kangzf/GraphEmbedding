@@ -3,6 +3,8 @@ from distance import astar_ged, beam_ged, hungarian_ged, vj_ged, ged
 from result import load_results_as_dict, load_result
 from vis import vis
 import networkx as nx
+import multiprocessing as mp
+from os import cpu_count
 from time import time
 from random import randint, uniform
 from pandas import read_csv
@@ -182,25 +184,43 @@ def exp6():
 def exp7():
     # Run baselines. Take a while.
     dataset = 'aids10k'
-    model = 'astar'
-    train_data = load_data(dataset, True)
-    test_data = load_data(dataset, False)
-    m = len(test_data.graphs)
-    n = len(train_data.graphs)
+    model = 'beam80'
+    row_graphs = load_data(dataset, train=False)
+    col_graphs = load_data(dataset, train=True)
+    exp7_helper(dataset, model, row_graphs, col_graphs)
+
+
+def exp7_helper(dataset, model, row_graphs, col_graphs):
+    m = len(row_graphs.graphs)
+    n = len(col_graphs.graphs)
+    m = 2
+    n = 2
     ged_mat = np.zeros((m, n))
     time_mat = np.zeros((m, n))
     outdir = '{}/{}'.format(get_result_path(), dataset)
     file = open('{}/csv/ged_{}_{}_{}.csv'.format( \
         outdir, dataset, model, get_ts()), 'w')
     print_and_log('i,j,i_node,j_node,i_edge,j_edge,ged,time', file)
+    # Multiprocessing.
+    pool = mp.Pool(processes=None)
+    print('Using {} CPUs'.format(cpu_count()))
+    # Submit to pool workers.
+    results = [[None] * n for _ in range(m)]
     for i in range(m):
         for j in range(n):
-            print('----- progress: {}/{}'.format(i * n + j, m * n))
-            g1 = test_data.graphs[i]
-            g2 = train_data.graphs[j]
-            t = time()
-            d = ged(g1, g2, model)
-            t = time() - t
+            print_progress(i, j, m, n, 'submit')
+            g1 = row_graphs.graphs[i]
+            g2 = col_graphs.graphs[j]
+            results[i][j] = pool.apply_async( \
+                ged, args=(g1, g2, model, True,))
+    # Retreve results from pool workers.
+    for i in range(m):
+        for j in range(n):
+            print_progress(i, j, m, n, 'work')
+            print(results[i][j])
+            d, t = results[i][j].get()
+            g1 = row_graphs.graphs[i]
+            g2 = col_graphs.graphs[j]
             s = '{},{},{},{},{},{},{},{:.5f}'.format(i, j, \
                                                      g1.number_of_nodes(),
                                                      g2.number_of_nodes(), \
@@ -215,6 +235,12 @@ def exp7():
         outdir, dataset, model, get_ts()), ged_mat)
     np.save('{}/time/ged_time_mat_{}_{}_{}'.format( \
         outdir, dataset, model, get_ts()), time_mat)
+
+
+def print_progress(i, j, m, n, label):
+    cur = i * n + j
+    tot = m * n
+    print('----- {} progress: {}/{}={:.1%}'.format(label, cur, tot, cur / tot))
 
 
 class Metric(object):
