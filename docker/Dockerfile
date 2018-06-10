@@ -52,5 +52,5 @@ WORKDIR /workspace
 # rsync -avzh ~/Documents/GraphEmbedding yba@qilin.cs.ucla.edu:/home/yba/
 # docker build .
 # docker tag 89c8df0682d5 yba_graphembedding
-# nvidia-docker run -v /home/yba/GraphEmbedding:/workspace -it yba_graphembedding "cd src && ls"
+# nvidia-docker run -v /home/yba/GraphEmbedding:/workspace -it yba_graphembedding bash
 # nvidia-docker run -v /home/yba/GraphEmbedding:/workspace --env CUDA_VISIBLE_DEVICES=_ yba_graphembedding

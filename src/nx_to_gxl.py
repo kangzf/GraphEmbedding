@@ -4,6 +4,7 @@ Credit: Yang Qiao (angelinana0408@gmail.com)
 
 import os
 from bs4 import BeautifulSoup as Soup
+from collections import OrderedDict
 
 
 def nx_to_gxl(G, graph_id, filename, graph_edgeids='false', \
@@ -21,9 +22,9 @@ def nx_to_gxl(G, graph_id, filename, graph_edgeids='false', \
     graph.attrs['edgemode'] = graph_edgemode
     # nodes
     error_sen = ""
-    nodeAttrName_type = {}
-    for nodeID in G.nodes():
-        for k, v in G.node[nodeID].items():  # G.node[nodeID] is attr key-value dict
+    nodeAttrName_type = OrderedDict()
+    for nodeID in sorted(G.nodes()):
+        for k, v in sorted(G.node[nodeID].items()):  # G.node[nodeID] is attr key-value dict
             if (k in nodeAttrName_type) and (nodeAttrName_type[k] == None):
                 nodeAttrName_type[k] == None  # do nothing
             elif (k in nodeAttrName_type) and (type(v) != nodeAttrName_type[k]):
@@ -50,9 +51,9 @@ def nx_to_gxl(G, graph_id, filename, graph_edgeids='false', \
                     print(error_sen)
             else:  # valid and consistent
                 nodeAttrName_type[k] = type(v)  # do nothing
-    for nodeID in G.nodes():
+    for nodeID in sorted(G.nodes()):
         node_tag = soup.new_tag("node", id=nodeID)
-        for k, v in G.node[nodeID].items():  # G.node[nodeID] is attr
+        for k, v in sorted(G.node[nodeID].items()):  # G.node[nodeID] is attr
             # key-value dict
             if nodeAttrName_type[k] == None:
                 continue
@@ -73,9 +74,9 @@ def nx_to_gxl(G, graph_id, filename, graph_edgeids='false', \
             node_tag.append(attr_tag)
         graph.append(node_tag)
     # edges
-    edgeAttrName_type = {}
-    for edge in G.edges():
-        for k, v in G[edge[0]][edge[1]].items():  # G[edge[0]][edge[1]] is attr key-value dict
+    edgeAttrName_type = OrderedDict()
+    for edge in sorted(G.edges()):
+        for k, v in sorted(G[edge[0]][edge[1]].items()):  # G[edge[0]][edge[1]] is attr key-value dict
             if (k in edgeAttrName_type) and (edgeAttrName_type[k] == None):
                 edgeAttrName_type[k] == None  # do nothing
             elif (k in edgeAttrName_type) and (type(v) != edgeAttrName_type[k]):
@@ -103,11 +104,10 @@ def nx_to_gxl(G, graph_id, filename, graph_edgeids='false', \
                     print(error_sen)
             else:  # valid and consistent
                 edgeAttrName_type[k] = type(v)  # do nothing
-    for edge in G.edges():
+    for edge in sorted(G.edges()):
         edge_tag = soup.new_tag("edge", to=edge[1])
         edge_tag.attrs['from'] = edge[0]
-        for k, v in G[edge[0]][
-            edge[1]].items():  # G[edge[0]][edge[1]] is attr key-value dict
+        for k, v in sorted(G[edge[0]][edge[1]].items()):  # G[edge[0]][edge[1]] is attr key-value dict
             if edgeAttrName_type[k] == None:
                 continue
             attr_type = ''
@@ -127,7 +127,7 @@ def nx_to_gxl(G, graph_id, filename, graph_edgeids='false', \
             edge_tag.append(attr_tag)
         graph.append(edge_tag)
     # save to gxl file
-    print("Saving gxl to {}".format(filename))
+    # print("Saving gxl to {}".format(filename))
     with open(filename, 'w') as f:
         for line in soup.prettify():
             f.write(str(line))

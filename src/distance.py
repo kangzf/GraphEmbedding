@@ -20,29 +20,8 @@ def mcs(g1, g2):
     return 0
 
 
-def hungarian_ged(g1, g2):
-    # # https://github.com/Jacobe2169/ged4py
-    # return graph_edit_dist.compare(g1, g2)
-    # ged4py has a bug. Use gmt instead as below.
-    return ged(g1, g2, 'hungarian')
-
-
-def astar_ged(g1, g2):
-    return ged(g1, g2, 'astar')
-
-
-def beam_ged(g1, g2, s):
-    return ged(g1, g2, 'beam{}'.format(s))
-
-
-def vj_ged(g1, g2):
-    return ged(g1, g2, 'vj')
-
-
-def ged(g1, g2, algo, timeit=False):
+def ged(g1, g2, algo, debug=False, timeit=False):
     # https://github.com/dan-zam/graph-matching-toolkit
-    if timeit:
-        t = time()
     gp = get_gmt_path()
     src, tp = setup_temp_folder(gp)
     meta1 = write_to_temp(g1, tp, algo, 'g1')
@@ -51,15 +30,25 @@ def ged(g1, g2, algo, timeit=False):
         raise RuntimeError(
             'Different meta data {} vs {}'.format(meta1, meta2))
     setup_property_file(src, gp, meta1)
+    if timeit:
+        t = time()
+    rtn = []
     if not exec(
             'cd {} && java -classpath {}/src/graph-matching-toolkit/bin algorithms.GraphMatching ./properties/properties_temp_{}_{}.prop'.format(
                 gp, get_root_path(), get_ts(), getpid(), timeout=1000)):
-        rtn = -1
+        rtn.append(-1)
     else:
-        rtn = get_result(gp, algo)
+        d, lcnt, g1size, g2size = get_result(gp, algo)
+        rtn.append(d)
+        if g1size != g1.number_of_nodes():
+            print('g1size {} g1.number_of_nodes() {}'.format(g1size, g1.number_of_nodes()))
+        assert (g1size == g1.number_of_nodes())
+        assert (g2size == g2.number_of_nodes())
+    if debug:
+        rtn += [lcnt, g1, g2]
     if timeit:
-        rtn = (rtn, time() - t)
-    return rtn
+        rtn.append(time() - t)
+    return tuple(rtn)
 
 
 def setup_temp_folder(gp):
@@ -96,20 +85,26 @@ def setup_property_file(src, gp, meta):
 def write_to_temp(g, tp, algo, g_name):
     node_attres, edge_attrs = nx_to_gxl(g, g_name,
                                         '{}/{}.gxl'.format(tp, g_name))
-    return algo + '_' + '_'.join(list(node_attres.keys()) + list( \
-        edge_attrs.keys()))
+    return algo + '_' + '_'.join(sorted(list(node_attres.keys())) + \
+                                 sorted(list(edge_attrs.keys())))
 
 
 def get_result(gp, algo):
     with open('{}/result/temp_{}_{}'.format(gp, get_ts(), getpid())) as f:
         lines = f.readlines()
         ln = 23 if 'beam' in algo else 22
-        rtn = float(lines[ln]) * 2  # alpha=0.5 --> / 2
-        assert (rtn - int(rtn) == 0)
-        rtn = int(rtn)
-        if rtn < 0:
-            rtn = -1  # in case rtn == -2
-        return rtn
+        d = float(lines[ln]) * 2  # alpha=0.5 --> / 2
+        assert (d - int(d) == 0)
+        d = int(d)
+        if d < 0:
+            d = -1  # in case rtn == -2
+        ln = 26 if 'beam' in algo else 25
+        g1size = int(lines[ln])
+        ln = 27 if 'beam' in algo else 26
+        g2size = int(lines[ln])
+        ln = 28 if 'beam' in algo else 27
+        lcnt = float(lines[ln])
+        return d, lcnt, g1size, g2size
 
 
 def get_gmt_path():

@@ -1,5 +1,5 @@
 from utils import get_root_path, sorted_nicely
-from distance import hungarian_ged
+from distance import ged
 import pickle
 import networkx as nx
 from random import randint
@@ -54,10 +54,10 @@ class Data(object):
                 t = time()
                 gi = graphs1[i]
                 gj = graphs2[j]
-                ged = hungarian_ged(gi, gj)
-                dist_mat[i][j] = ged
+                d = ged(gi, gj, 'beam80')
+                dist_mat[i][j] = d
                 print('{},{},{},{},{},{:.5f}'.format( \
-                    i, j, len(gi), len(gj), ged, time() - t))
+                    i, j, len(gi), len(gj), d, time() - t))
         return dist_mat
 
     def get_gids(self):

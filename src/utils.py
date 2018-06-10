@@ -28,6 +28,10 @@ def get_root_path():
     return dirname(dirname(abspath(__file__)))
 
 
+def get_data_path():
+    return get_root_path() + '/data'
+
+
 def get_save_path():
     return get_root_path() + '/save'
 
@@ -47,10 +51,25 @@ def draw_graph(g, file):
     print('Saved graph to {}'.format(file))
 
 
+exec_print = True
+
+
+def exec_turnoff_print():
+    global exec_print
+    exec_print = False
+
+
+def exec_turnon_print():
+    global exec_print
+    exec_print = True
+
+
 def exec(cmd, timeout=None):
+    global exec_print
     if not timeout:
         from os import system
-        print(cmd)
+        if exec_print:
+            print(cmd)
         system(cmd)
         return True  # finished
     else:
@@ -78,7 +97,8 @@ def exec(cmd, timeout=None):
                 else:
                     self.finished = True
 
-        print('Timed cmd {}sec {}'.format(timeout, cmd))
+        if exec_print:
+            print('Timed cmd {}sec {}'.format(timeout, cmd))
         r = RunCmd(cmd, timeout)
         r.Run()
         return r.finished
@@ -88,10 +108,10 @@ tstamp = None
 
 
 def get_ts():
-    import datetime
+    import datetime, pytz
     global tstamp
     if not tstamp:
-        tstamp = datetime.datetime.now().isoformat()
+        tstamp = datetime.datetime.now(pytz.timezone('US/Pacific')).strftime('%Y-%m-%dT%H:%M:%S')
     return tstamp
 
 
