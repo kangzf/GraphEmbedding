@@ -70,6 +70,8 @@ def exec(cmd, timeout=None):
         from os import system
         if exec_print:
             print(cmd)
+        else:
+            cmd += ' > /dev/null'
         system(cmd)
         return True  # finished
     else:
@@ -102,6 +104,14 @@ def exec(cmd, timeout=None):
         r = RunCmd(cmd, timeout)
         r.Run()
         return r.finished
+
+
+def tmux(command):
+    exec('tmux %s' % command)
+
+
+def tmux_shell(command):
+    exec('send-keys "%s" "C-m"' % command)
 
 
 tstamp = None
