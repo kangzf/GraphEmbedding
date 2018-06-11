@@ -244,6 +244,9 @@ class NTN(Layer):
         if self.logging:
             self._log_vars()
 
+    def gaussian(x):
+        return tf.exp(-self.yeta*tf.square(x))
+
     def _call(self, inputs):
         # x_1 = tf.sparse_to_dense(inputs[0]) 
         # x_2 = tf.sparse_to_dense(inputs[1])
@@ -298,10 +301,5 @@ class NTN(Layer):
         # tensor_bi_product = self.U*self.activation(K.reshape(
         #                     tensor_bi_product,(self.k,batch_size))).T
 
-        return tf.exp(-self.yeta*tf.square(output))
-
-
-
-
-
-
+        return gaussian(output)
+    
