@@ -1,5 +1,5 @@
-from utils import get_root_path
-from distance import hungarian_ged
+from utils import get_root_path, sorted_nicely
+from distance import ged
 import pickle
 import networkx as nx
 from random import randint
@@ -54,11 +54,14 @@ class Data(object):
                 t = time()
                 gi = graphs1[i]
                 gj = graphs2[j]
-                ged = hungarian_ged(gi, gj)
-                dist_mat[i][j] = ged
+                d = ged(gi, gj, 'beam80')
+                dist_mat[i][j] = d
                 print('{},{},{},{},{},{:.5f}'.format( \
-                    i, j, len(gi), len(gj), ged, time() - t))
+                    i, j, len(gi), len(gj), d, time() - t))
         return dist_mat
+
+    def get_gids(self):
+        return [g.graph['gid'] for g in self.graphs]
 
 
 class SynData(Data):
@@ -74,7 +77,9 @@ class SynData(Data):
         for i in range(self.num_graphs):
             n = randint(5, 20)
             m = randint(n - 1, n * (n - 1) / 2)
-            self.graphs.append(nx.gnm_random_graph(n, m))
+            g = nx.gnm_random_graph(n, m)
+            g.graph['gid'] = i
+            self.graphs.append(g)
         print('Randomly generated %s graphs' % self.num_graphs)
         if self.train:
             self.train_train_dist = self.get_dist_mat(self.graphs, self.graphs)
@@ -92,7 +97,7 @@ class AIDS10kData(Data):
         self.graphs = []
         datadir = get_root_path() + '/data/AIDS10k/' + ('train' if self.train \
             else 'test')
-        for file in glob(datadir + '/*.gexf'):
+        for file in sorted_nicely(glob(datadir + '/*.gexf')):
             gid = int(file.split('/')[-1].split('.')[0])
             g = nx.read_gexf(file)
             g.graph['gid'] = gid
@@ -100,4 +105,8 @@ class AIDS10kData(Data):
             if not nx.is_connected(g):
                 raise RuntimeError('{} not connected'.format(gid))
         print('Loaded {} graphs from {}'.format(len(self.graphs), datadir))
+
+
+
+
 

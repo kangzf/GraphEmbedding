@@ -122,3 +122,6 @@ try.py
 graph-matching-toolkit/
 graph-lib/
 graph2vec_tf/
+metapath2vec/
+result/
+sftp-config.json

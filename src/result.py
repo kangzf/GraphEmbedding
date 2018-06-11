@@ -36,11 +36,11 @@ class Result(object):
         if not inclusive:
             return ged_sort_id_mat[qid][:k]
         # Tie inclusive.
-        ged_mat = self.ged_sim_mat(norm)
+        ged_sim_mat = self.ged_sim_mat(norm)
         while k < n:
             cid = ged_sort_id_mat[qid][k - 1]
             nid = ged_sort_id_mat[qid][k]
-            if ged_mat[qid][cid] == ged_mat[qid][nid]:
+            if ged_sim_mat[qid][cid] == ged_sim_mat[qid][nid]:
                 k += 1
             else:
                 break

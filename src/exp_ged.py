@@ -1,13 +1,16 @@
-from utils import get_root_path, load_data, get_ts
-from distance import astar_ged, beam_ged, hungarian_ged, vj_ged, ged
+from utils import get_root_path, get_result_path, load_data, get_ts, \
+    exec_turnoff_print, tmux, tmux_shell
+from distance import ged
 from result import load_results_as_dict, load_result
-from vis import vis
+# from vis import vis
 import networkx as nx
+import multiprocessing as mp
+from os import cpu_count
 from time import time
 from random import randint, uniform
-from pandas import read_csv
-import matplotlib.pyplot as plt
-import matplotlib
+# from pandas import read_csv
+# import matplotlib.pyplot as plt
+# import matplotlib
 import numpy as np
 from glob import glob
 
@@ -179,40 +182,85 @@ def exp6():
     print(hungarian_ged(g0, g1))
 
 
+# def exp7_tmux():
+#     # Run baselines. Take a while.
+#     dataset = 'aids10k'
+#     models = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
+#               'hungarian', 'vj']
+#     computer_name = 'yba'
+#     row_graphs = load_data(dataset, train=False)
+#     col_graphs = load_data(dataset, train=True)
+#     num_cpu = 6
+#     exec_turnoff_print()
+#     for model in models:
+#         exp7_helper(dataset, model, row_graphs, col_graphs, computer_name, num_cpu)
+
+
 def exp7():
+    # Run baselines. Take a while.
     dataset = 'aids10k'
-    model = 'astar'
-    train_data = load_data(dataset, True)
-    test_data = load_data(dataset, False)
-    m = len(test_data.graphs)
-    n = len(train_data.graphs)
+    model = 'beam80'
+    computer_name = 'qilin'
+    row_graphs = load_data(dataset, train=False)
+    col_graphs = load_data(dataset, train=True)
+    num_cpu = 6
+    exec_turnoff_print()
+    exp7_helper(dataset, model, row_graphs, col_graphs, computer_name, num_cpu)
+
+
+def exp7_helper(dataset, model, row_graphs, col_graphs, computer_name, num_cpu):
+    m = len(row_graphs.graphs)
+    n = len(col_graphs.graphs)
     ged_mat = np.zeros((m, n))
-    time_mat = np.zeros((n, n))
-    outdir = get_root_path() + '/files'
-    file = open('{}/ged_{}_{}_{}.csv'.format( \
-        outdir, dataset, model, get_ts()), 'w')
-    print_and_log('i,j,i_node,j_node,i_edge,j_edge,ged,time', file)
+    time_mat = np.zeros((m, n))
+    outdir = '{}/{}'.format(get_result_path(), dataset)
+    csv_fn = '{}/csv/ged_{}_{}_{}_{}_{}cpus.csv'.format( \
+        outdir, dataset, model, get_ts(), computer_name, num_cpu)
+    file = open(csv_fn, 'w')
+    print('Saving to {}'.format(csv_fn))
+    print_and_log('i,j,i_gid,j_gid,i_node,j_node,i_edge,j_edge,ged,lcnt,time(msec)', file)
+    # Multiprocessing.
+    pool = mp.Pool(processes=num_cpu)
+    # print('Using {} CPUs'.format(cpu_count()))
+    # Submit to pool workers.
+    results = [[None] * n for _ in range(m)]
     for i in range(m):
         for j in range(n):
-            g1 = test_data.graphs[i]
-            g2 = train_data.graphs[j]
-            t = time()
-            d = ged(g1, g2, model)
-            t = time() - t
-            s = '{},{},{},{},{},{},{},{:.5f}'.format(i, j, \
-                                                     g1.number_of_nodes(),
-                                                     g2.number_of_nodes(), \
-                                                     g1.number_of_edges(),
-                                                     g2.number_of_edges(), \
-                                                     d, t)
+            g1 = row_graphs.graphs[i]
+            g2 = col_graphs.graphs[j]
+            results[i][j] = pool.apply_async( \
+                ged, args=(g1, g2, model, True, True,))
+        print_progress(i, j, m, n, 'submit: {} {} cpus;'.format(model, num_cpu))
+    # Retreve results from pool workers.
+    for i in range(m):
+        for j in range(n):
+            print_progress(i, j, m, n, 'work: {} {} cpus;'.format(model, num_cpu))
+            d, lcnt, g1_a, g2_a, t = results[i][j].get()
+            g1 = row_graphs.graphs[i]
+            g2 = col_graphs.graphs[j]
+            assert (g1.number_of_nodes() == g1_a.number_of_nodes())
+            assert (g2.number_of_nodes() == g2_a.number_of_nodes())
+            s = '{},{},{},{},{},{},{},{},{},{},{:.2f}'.format( \
+                i, j, g1.graph['gid'], g2.graph['gid'], \
+                g1.number_of_nodes(),
+                g2.number_of_nodes(), \
+                g1.number_of_edges(),
+                g2.number_of_edges(), \
+                d, lcnt, t)
             print_and_log(s, file)
             ged_mat[i][j] = d
             time_mat[i][j] = t
     file.close()
-    np.save('{}/ged_ged_mat_{}_{}_{}'.format( \
-        outdir, dataset, model, get_ts()), ged_mat)
-    np.save('{}/ged_time_mat_{}_{}_{}'.format( \
-        outdir, dataset, model, get_ts()), time_mat)
+    np.save('{}/ged/ged_ged_mat_{}_{}_{}_{}'.format( \
+        outdir, dataset, model, get_ts(), ged_mat, computer_name), ged_mat)
+    np.save('{}/time/ged_time_mat_{}_{}_{}_{}'.format( \
+        outdir, dataset, model, get_ts(), time_mat, computer_name), time_mat)
+
+
+def print_progress(i, j, m, n, label):
+    cur = i * n + j
+    tot = m * n
+    print('----- {} progress: {}/{}={:.1%}'.format(label, cur, tot, cur / tot))
 
 
 class Metric(object):
