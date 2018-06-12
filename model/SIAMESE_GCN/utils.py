@@ -5,10 +5,58 @@ import scipy.sparse as sp
 from scipy.sparse.linalg.eigen.arpack import eigsh
 import sys
 
+import os.path
+sys.path.append("../..")
+from src.utils import load_data
 
-# TODO: load networkx graph dataset 
-def data_load():
-    pass
+# TODO: Sampling based on graph density distribution
+def sampling(graphs, sample_num):
+    # measure graph density
+    density = [nx.density[g] for g in graphs]
+
+    # TODO: Get the sample index based on distribution
+    idx = [] 
+    return [graphs[i] for i in idx]
+
+def extract_features(adj, feature, graph_list):
+    for g in graph_list:
+        adj.append(nx.adjacency_matrix(g))
+        # TODO: one-hot encoding features
+        feature.append()
+    return [adj, feature]
+
+def save_sample_GED(sample_num, ged_mat):
+    np.savetxt("train_GED"+sample_num+".csv", ged_mat, delimiter=",")
+
+def data_load(dataset_str, sample_num):
+    train = load_data(dataset_str, train=True)
+    test = load_data(dataset_str, train=False)
+
+    train.graphs = sampling(train.graphs, sample_num)
+
+    # lists of scipy sparse matrices
+    adj_train = [] 
+    feature_train = []
+    adj_test = []
+    feature_test = []
+
+    adj_train, feature_train = extract_features(adj_train, feature_train, train.graphs, sample_num) 
+    adj_test, feature_test = extract_features(adj_test, feature_test, test.graphs, sample_num)
+
+    # Ground Truth calculation and save
+    if os.path.exists("test_GED.csv"):
+        y_test = np.loadtxt("test_GED.csv", delimiter=",")
+    else:
+        y_test = test.get_dist_mat(test.graphs, test.graphs)
+        np.savetxt("test_GED.csv", y_test, delimiter=",")
+
+    if os.path.exists("train_GED"+sample_num+".csv"):
+        y_train = np.loadtxt("train_GED"+sample_num+".csv", delimiter=",")
+    else:
+        y_train = train.get_dist_mat(train_data.graphs, train.graphs)
+        save_sample_GED(sample_num, y_train)
+
+
 
 def parse_index_file(filename):
     """Parse index file."""
@@ -25,7 +73,7 @@ def sample_mask(idx, l):
     return np.array(mask, dtype=np.bool)
 
 
-def load_data(dataset_str):
+def load_data_origin(dataset_str):
     """
     Loads input data from gcn/data directory
 
