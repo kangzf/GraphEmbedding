@@ -244,7 +244,7 @@ class NTN(Layer):
         if self.logging:
             self._log_vars()
 
-    def gaussian(x):
+    def gaussian(self, x):
         return tf.exp(-self.yeta*tf.square(x))
 
     def _call(self, inputs):
@@ -301,5 +301,4 @@ class NTN(Layer):
         # tensor_bi_product = self.U*self.activation(K.reshape(
         #                     tensor_bi_product,(self.k,batch_size))).T
 
-        return gaussian(output)
-    
+        return self.gaussian(output)
