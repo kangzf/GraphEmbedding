@@ -199,11 +199,11 @@ def exp6():
 def exp7():
     # Run baselines. Take a while.
     dataset = 'aids10k'
-    model = 'beam80'
+    model = 'hungarian'
     computer_name = 'qilin'
     row_graphs = load_data(dataset, train=False)
     col_graphs = load_data(dataset, train=True)
-    num_cpu = 6
+    num_cpu = 8
     exec_turnoff_print()
     exp7_helper(dataset, model, row_graphs, col_graphs, computer_name, num_cpu)
 
@@ -251,10 +251,10 @@ def exp7_helper(dataset, model, row_graphs, col_graphs, computer_name, num_cpu):
             ged_mat[i][j] = d
             time_mat[i][j] = t
     file.close()
-    np.save('{}/ged/ged_ged_mat_{}_{}_{}_{}'.format( \
-        outdir, dataset, model, get_ts(), ged_mat, computer_name), ged_mat)
-    np.save('{}/time/ged_time_mat_{}_{}_{}_{}'.format( \
-        outdir, dataset, model, get_ts(), time_mat, computer_name), time_mat)
+    np.save('{}/ged/ged_ged_mat_{}_{}_{}_{}_{}cpus'.format( \
+        outdir, dataset, model, get_ts(), computer_name, num_cpu), ged_mat)
+    np.save('{}/time/ged_time_mat_{}_{}_{}_{}_{}cpus'.format( \
+        outdir, dataset, model, get_ts(), computer_name, num_cpu), time_mat)
 
 
 def print_progress(i, j, m, n, label):
