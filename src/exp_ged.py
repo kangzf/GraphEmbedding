@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from utils import get_root_path, get_result_path, load_data, get_ts, \
     exec_turnoff_print, tmux, tmux_shell
 from distance import ged
@@ -199,8 +200,8 @@ def exp6():
 def exp7():
     # Run baselines. Take a while.
     dataset = 'aids10k'
-    model = 'hungarian'
-    computer_name = 'qilin'
+    model = 'beam80'
+    computer_name = 'yba'
     row_graphs = load_data(dataset, train=False)
     col_graphs = load_data(dataset, train=True)
     num_cpu = 8

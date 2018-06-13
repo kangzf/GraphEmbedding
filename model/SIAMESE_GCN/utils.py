@@ -6,7 +6,9 @@ from scipy.sparse.linalg.eigen.arpack import eigsh
 import sys
 
 import os.path
-sys.path.append("../..")
+from os.path import dirname, abspath
+sys.path.append("{}/..".format(dirname(dirname(abspath(__file__)))))
+
 from src.utils import load_data
 
 # TODO: Sampling based on graph density distribution

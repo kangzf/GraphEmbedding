@@ -19,7 +19,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('dataset', 'cora', 'Dataset string.')  # 'cora', 'citeseer', 'pubmed'
 flags.DEFINE_string('model', 'gcntn', 'Model string.')  # 'gcntn', gcn', 'gcn_cheby', 'dense'
 flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
-flags.DEFINE_integer('epochs', 10, 'Number of epochs to train.')
+flags.DEFINE_integer('epochs', 1000000000, 'Number of epochs to train.')
 flags.DEFINE_integer('hidden1', 16, 'Number of units in hidden layer 1.')
 flags.DEFINE_integer('feature_map_dim', 10, 'Number of feature maps in NTN.')
 flags.DEFINE_integer('batch_size', 2, 'Number of graph pairs in a batch.')
@@ -111,22 +111,22 @@ for epoch in range(FLAGS.epochs):
     outs = sess.run([model.opt_op, model.loss], feed_dict=feed_dict)
 
     # Validation
-    cost, duration = evaluate(features_1, features_2, support_1, support_2, y_val, placeholders)
+    cost, duration = evaluate(features_1, features_2, support_1, support_2, y_train, placeholders)
     cost_val.append(cost)
 
     # Print results
     print("Epoch:", '%04d' % (epoch + 1), "train_loss=", "{:.5f}".format(outs[1]),
           "val_loss=", "{:.5f}".format(cost), "time=", "{:.5f}".format(time.time() - t))
 
-    if epoch > FLAGS.early_stopping and cost_val[-1] > np.mean(cost_val[-(FLAGS.early_stopping+1):-1]):
-        print("Early stopping...")
-        break
+    # if epoch > FLAGS.early_stopping and cost_val[-1] > np.mean(cost_val[-(FLAGS.early_stopping+1):-1]):
+    #     print("Early stopping...")
+    #     break
 
 print("Optimization Finished!")
 
 # Testing
-test_cost, test_duration = evaluate(features_1, features_2, support_1, support_2, y_test, placeholders)
-print("Test set results:", "cost=", "{:.5f}".format(test_cost), "time=", "{:.5f}".format(test_duration))
+# test_cost, test_duration = evaluate(features_1, features_2, support_1, support_2, y_test, placeholders)
+# print("Test set results:", "cost=", "{:.5f}".format(test_cost), "time=", "{:.5f}".format(test_duration))
 
 
 
