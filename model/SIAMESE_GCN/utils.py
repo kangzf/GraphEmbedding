@@ -137,7 +137,7 @@ def data_load(dataset_str, sample_num):
         y_train = train.GED_sym_cal(train_sam)
         save_obj(y_train,save_path+'/train_GED'+sample_num+'.pkl')
 
-return adj_train, feature_train, adj_test, feature_test, y_train, y_test, adj_all, feature_all
+return adj_train, feature_train, adj_test, feature_test, y_train, y_test, adj_all, feature_all, idx
 
 
 
