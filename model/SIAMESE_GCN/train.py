@@ -95,7 +95,7 @@ def evaluate(features_1, features_2, support_1, support_2, labels, placeholders)
     t_test = time.time()
     loss_val = []
     for row, f_s1 in enumerate(zip(features_1, support_1)):
-        for col f_s2 in enumerate(zip(features_2, support_2)):
+        for col, f_s2 in enumerate(zip(features_2, support_2)):
             feed_dict_val = construct_feed_dict(features_1, features_2, support_1, support_2, labels[row][col], placeholders)
             temp_loss = sess.run(model.loss, feed_dict=feed_dict_val)
             loss_val.append(temp_loss)
@@ -108,10 +108,10 @@ cost_val = []
 # Train model
 for epoch in range(FLAGS.epochs):
 
-    t = time.time()   
+    t = time.time()
     cost_train = []
     for row, f_s1 in enumerate(zip(features_1, support_1)):
-        for col f_s2 in enumerate(zip(features_2, support_2)):
+        for col, f_s2 in enumerate(zip(features_2, support_2)):
             # Construct feed dictionary
             feed_dict = construct_feed_dict(f_s1[0],f_s2[0], f_s1[1], f_s2[1], y_train[row][col], placeholders)
             feed_dict.update({placeholders['dropout']: FLAGS.dropout})
