@@ -71,7 +71,7 @@ class SynData(Data):
                                SynData.test_num_graphs)
 
 
-class AIDS10kData(Data):
+class AIDSData(Data):
     def __init__(self, train):
         super().__init__(train)
 
@@ -89,14 +89,16 @@ class AIDS10kData(Data):
                 raise RuntimeError('{} not connected'.format(gid))
         print('Loaded {} graphs from {}'.format(len(self.graphs), datadir))
 
-    def sort(self):
-        return sorted_nicely
 
+class AIDS10kData(AIDSData):
     def get_folder_name(self):
         return 'AIDS10k'
 
+    def sort(self):
+        return sorted_nicely
 
-class AIDS10kDataSmall(AIDS10kData):
+
+class AIDS10kSmallData(AIDSData):
     def get_folder_name(self):
         return 'AIDS10k_small'
 
@@ -105,3 +107,11 @@ class AIDS10kDataSmall(AIDS10kData):
 
     def fake_sort(self, x):
         return x
+
+
+class AIDS50Data(AIDSData):
+    def get_folder_name(self):
+        return 'AIDS50'
+
+    def sort(self):
+        return sorted_nicely

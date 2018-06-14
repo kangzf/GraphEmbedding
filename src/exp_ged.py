@@ -190,10 +190,10 @@ def exp6():
 def exp7():
     # Run baselines. Take a while.
     dataset = 'aids10k'
-    model = 'beam80'
+    model = 'beam5'
     row_graphs = load_data(dataset, train=False)
     col_graphs = load_data(dataset, train=True)
-    num_cpu = 8
+    num_cpu = 10
     exec_turnoff_print()
     exp7_helper(dataset, model, row_graphs, col_graphs, num_cpu)
 
@@ -221,11 +221,13 @@ def exp7_helper(dataset, model, row_graphs, col_graphs, num_cpu):
             g2 = col_graphs.graphs[j]
             results[i][j] = pool.apply_async( \
                 ged, args=(g1, g2, model, True, True,))
-        print_progress(i, j, m, n, 'submit: {} {} cpus;'.format(model, num_cpu))
+        print_progress(i, j, m, n, 'submit: {} {} {} cpus;'. \
+                       format(model, computer_name, num_cpu))
     # Retrieve results from pool workers.
     for i in range(m):
         for j in range(n):
-            print_progress(i, j, m, n, 'work: {} {} cpus;'.format(model, num_cpu))
+            print_progress(i, j, m, n, 'work: {} {} {} cpus;'. \
+                           format(model, computer_name, num_cpu))
             d, lcnt, g1_a, g2_a, t = results[i][j].get()
             g1 = row_graphs.graphs[i]
             g2 = col_graphs.graphs[j]
@@ -233,10 +235,8 @@ def exp7_helper(dataset, model, row_graphs, col_graphs, num_cpu):
             assert (g2.number_of_nodes() == g2_a.number_of_nodes())
             s = '{},{},{},{},{},{},{},{},{},{},{:.2f}'.format( \
                 i, j, g1.graph['gid'], g2.graph['gid'], \
-                g1.number_of_nodes(),
-                g2.number_of_nodes(), \
-                g1.number_of_edges(),
-                g2.number_of_edges(), \
+                g1.number_of_nodes(), g2.number_of_nodes(), \
+                g1.number_of_edges(), g2.number_of_edges(), \
                 d, lcnt, t)
             print_and_log(s, file)
             ged_mat[i][j] = d
@@ -256,11 +256,11 @@ def print_progress(i, j, m, n, label):
 
 def exp8():
     # Plot ged and time.
-    dataset = 'aids10k_small'
+    dataset = 'aids50'
     models = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
               'hungarian', 'vj']
     rs = load_results_as_dict(dataset, models)
-    metrics = [Metric('ged', 'ged'), Metric('time', 'time (sec)')]
+    metrics = [Metric('ged', 'ged'), Metric('time', 'time (msec)')]
     for metric in metrics:
         exp8_helper(dataset, models, metric, rs)
 
@@ -303,9 +303,9 @@ def get_test_graph_sizes(dataset):
 
 def exp9():
     # Plot ap@k.
-    dataset = 'aids10k_small'
+    dataset = 'aids50'
     models = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
-              'hungarian', 'vj', 'graph2vec']
+              'hungarian', 'vj']
     true_model = 'beam80'
     metric = 'ap@k'
     norms = [True, False]
@@ -461,4 +461,4 @@ def get_graph_stats_text(g):
         g.number_of_nodes(), g.number_of_edges(), nx.density(g))
 
 
-exp9()
+exp7()

@@ -16,9 +16,12 @@ def load_data(data, train):
     if data == 'syn':
         from data import SynData
         return SynData(train)
+    elif data == 'aids50':
+        from data import AIDS50Data
+        return AIDS50Data(train)
     elif data == 'aids10k_small':
-        from data import AIDS10kDataSmall
-        return AIDS10kDataSmall(train)
+        from data import AIDS10kSmallData
+        return AIDS10kSmallData(train)
     elif data == 'aids10k':
         from data import AIDS10kData
         return AIDS10kData(train)
