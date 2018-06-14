@@ -4,7 +4,7 @@ from __future__ import print_function
 import time
 import tensorflow as tf
 
-from utils import *
+from gcn_utils import *
 from models import GCNTN
 from scipy import sparse
 

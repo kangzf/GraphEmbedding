@@ -7,11 +7,10 @@ import sys
 
 import random
 from os.path import dirname, abspath, exists
-sys.path.append("{}/..".format(dirname(dirname(abspath(__file__)))))
-# from src.utils import load_data, get_root_path, exec, get_ts
+sys.path.insert(0, "{}/../src".format(dirname(dirname(abspath(__file__)))))
+from utils import load_data
 # from src.nx_to_gxl import nx_to_gxl
-from src import *
-from src.distance import ged
+from distance import ged
 
 
 random.seed(123)
