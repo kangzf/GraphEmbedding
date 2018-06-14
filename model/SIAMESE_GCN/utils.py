@@ -139,8 +139,6 @@ def data_load(dataset_str, sample_num):
 
 return adj_train, feature_train, adj_test, feature_test, y_train, y_test, adj_all, feature_all, idx
 
-
-
 def parse_index_file(filename):
     """Parse index file."""
     index = []
