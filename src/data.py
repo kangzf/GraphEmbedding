@@ -1,10 +1,7 @@
-from utils import get_root_path, sorted_nicely
-from distance import ged
+from utils import get_data_path, get_save_path, sorted_nicely
 import pickle
 import networkx as nx
 from random import randint
-import numpy as np
-from time import time
 from glob import glob
 
 
@@ -43,22 +40,7 @@ class Data(object):
         self.__dict__ = pickle.loads(dp)
 
     def save_filename(self):
-        return '{}/save/{}.pkl'.format(get_root_path(), self.name)
-
-    def get_dist_mat(self, graphs1, graphs2):
-        dist_mat = np.zeros((len(graphs1), len(graphs2)))
-        print('Generating distance matrix of {}'.format(dist_mat.shape))
-        print('i,j,#node_i,#node_j,dist,time')
-        for i in range(len(graphs1)):
-            for j in range(len(graphs2)):
-                t = time()
-                gi = graphs1[i]
-                gj = graphs2[j]
-                d = ged(gi, gj, 'beam80')
-                dist_mat[i][j] = d
-                print('{},{},{},{},{},{:.5f}'.format( \
-                    i, j, len(gi), len(gj), d, time() - t))
-        return dist_mat
+        return '{}/{}.pkl'.format(get_save_path(), self.name)
 
     def get_gids(self):
         return [g.graph['gid'] for g in self.graphs]
@@ -89,15 +71,16 @@ class SynData(Data):
                                SynData.test_num_graphs)
 
 
-class AIDS10kData(Data):
+class AIDSData(Data):
     def __init__(self, train):
         super().__init__(train)
 
     def init(self):
         self.graphs = []
-        datadir = get_root_path() + '/data/AIDS10k/' + ('train' if self.train \
-            else 'test')
-        for file in sorted_nicely(glob(datadir + '/*.gexf')):
+        datadir = '{}/{}/{}'.format( \
+            get_data_path(), self.get_folder_name(), 'train' if self.train \
+                else 'test')
+        for file in self.sort()(glob(datadir + '/*.gexf')):
             gid = int(file.split('/')[-1].split('.')[0])
             g = nx.read_gexf(file)
             g.graph['gid'] = gid
@@ -107,6 +90,28 @@ class AIDS10kData(Data):
         print('Loaded {} graphs from {}'.format(len(self.graphs), datadir))
 
 
+class AIDS10kData(AIDSData):
+    def get_folder_name(self):
+        return 'AIDS10k'
+
+    def sort(self):
+        return sorted_nicely
 
 
+class AIDS10kSmallData(AIDSData):
+    def get_folder_name(self):
+        return 'AIDS10k_small'
 
+    def sort(self):
+        return self.fake_sort
+
+    def fake_sort(self, x):
+        return x
+
+
+class AIDS50Data(AIDSData):
+    def get_folder_name(self):
+        return 'AIDS50'
+
+    def sort(self):
+        return sorted_nicely

@@ -13,9 +13,13 @@ from random import sample, shuffle
 random.seed(123)
 
 
-def gen_linux():
-    dirin = get_data_path() + '/Linux'
-    file = dirin + '/Linux.txt'
+def gen_graphs():
+    # dirin = get_data_path() + '/Linux'
+    # file = dirin + '/Linux.txt'
+    # train_dirout = dirin + '/train'
+    # test_dirout = dirin + '/test'
+    dirin = get_data_path() + '/iGraph20/datasets'
+    file = dirin + '/nasa.igraph'
     train_dirout = dirin + '/train'
     test_dirout = dirin + '/test'
     graphs = {}
@@ -56,4 +60,4 @@ def vis_example():
     g = nx.read_graphml(file)
     print(g)
 
-vis_example()
+gen_graphs()
