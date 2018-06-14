@@ -1,10 +1,7 @@
 from utils import get_data_path, get_save_path, sorted_nicely
-from distance import ged
 import pickle
 import networkx as nx
 from random import randint
-import numpy as np
-from time import time
 from glob import glob
 
 
@@ -44,21 +41,6 @@ class Data(object):
 
     def save_filename(self):
         return '{}/{}.pkl'.format(get_save_path(), self.name)
-
-    def get_dist_mat(self, graphs1, graphs2):
-        dist_mat = np.zeros((len(graphs1), len(graphs2)))
-        print('Generating distance matrix of {}'.format(dist_mat.shape))
-        print('i,j,#node_i,#node_j,dist,time')
-        for i in range(len(graphs1)):
-            for j in range(len(graphs2)):
-                t = time()
-                gi = graphs1[i]
-                gj = graphs2[j]
-                d = ged(gi, gj, 'beam80')
-                dist_mat[i][j] = d
-                print('{},{},{},{},{},{:.5f}'.format( \
-                    i, j, len(gi), len(gj), d, time() - t))
-        return dist_mat
 
     def get_gids(self):
         return [g.graph['gid'] for g in self.graphs]
