@@ -218,11 +218,33 @@ def proc_filepath(filepath):
     return filepath
 
 
-def prompt(str, options):
+def prompt(str, options=None):
     while True:
         t = input(str)
-        if t in options:
+        if options:
+            if t in options:
+                return t
+        else:
             return t
+
+
+def prompt_get_cpu():
+    from os import cpu_count
+    while True:
+        num_cpu = prompt( \
+            '{} cpus available. How many do you want?'.format( \
+                cpu_count()))
+        num_cpu = parse_as_int(num_cpu)
+        if num_cpu and num_cpu <= cpu_count():
+            return num_cpu
+
+
+def parse_as_int(s):
+    try:
+        rtn = int(s)
+        return rtn
+    except ValueError:
+        return None
 
 
 computer_name = None

@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 from utils import get_result_path, load_data, get_ts, \
-    exec_turnoff_print, get_computer_name, check_nx_version
-from metrics import Metric, precision_at_ks
+    exec_turnoff_print, get_computer_name, check_nx_version, prompt_get_cpu
+from metrics import Metric, precision_at_ks, mean_reciprocal_rank
 from distance import ged
 from result import load_results_as_dict, load_result
 import networkx as nx
 
 check_nx_version()
 import multiprocessing as mp
-from os import cpu_count
 from time import time
 from random import randint, uniform
 
@@ -19,6 +18,7 @@ if get_computer_name() == 'yba':  # local
     from vis import vis
 import numpy as np
 
+""" Plotting args. """
 args1 = {'astar': {'color': 'grey'},
          'beam5': {'color': 'deeppink'},
          'beam10': {'color': 'b'},
@@ -44,6 +44,7 @@ args2 = {'astar': {'marker': '*', 'facecolors': 'none', 'edgecolors': 'grey'},
 
 
 def exp1():
+    """ Toy. """
     g0 = create_graph([(0, 1), (1, 2), (2, 3), (3, 4), (4, 0), (0, 5)])
     g1 = create_graph([(0, 1), (1, 2), (2, 3), (3, 0), (0, 4), (4, 5)])
     # draw_graph(g0, get_result_path() + '/syn/exp1_g0.png')
@@ -54,9 +55,7 @@ def exp1():
     nx.set_node_attributes(g1, 'label', {0: 1, 1: 1, 2: 1, 3: 1, 4: 0, 5: 1})
     print('hungarian_ged', ged(g0, g1, 'hungarian'))
     print('astar_ged', ged(g0, g1, 'astar'))
-
-
-def exp2():
+    # Another toy.
     g0 = nx.Graph()
     g0.add_node(0)
     g1 = create_graph([(0, 1)])
@@ -64,13 +63,16 @@ def exp2():
     nx.set_node_attributes(g1, 'label', {0: 0, 1: 1})
     print('hungarian_ged', ged(g0, g1, 'hungarian'))
     print('astar_ged', ged(g0, g1, 'astar'))
-
-
-def exp3():
+    # Another toy.
     g0 = create_graph([(0, 1), (1, 2), (2, 0)])
     g1 = create_graph([(0, 1)])
     nx.set_node_attributes(g0, 'label', {0: 1, 1: 1, 2: 0})
     nx.set_node_attributes(g1, 'label', {0: 1, 1: 0})
+    print(ged(g0, g1, 'hungarian'))
+    # Another toy.
+    g0 = nx.Graph()
+    g0.add_node(0)
+    g1 = create_graph([(0, 1), (0, 2), (0, 2), (1, 2), (1, 3), (2, 3), (3, 4)])
     print(ged(g0, g1, 'hungarian'))
 
 
@@ -81,7 +83,8 @@ def create_graph(edges):
     return g
 
 
-def exp4():
+def exp2():
+    """ Run baselines on a synthetic dataset. """
     ms = ['astar', 'beam5', 'beam10', 'beam20', 'beam40', 'beam80',
           'hungarian', 'vj']
     fn = '_'.join(ms)
@@ -135,7 +138,8 @@ def generate_random_graph(n, connected=True):
     return g
 
 
-def exp5():
+def exp3():
+    """ Plot ged and time for the synthetic dataset. """
     font = {'family': 'serif',
             'size': 22}
     matplotlib.rc('font', **font)
@@ -180,25 +184,18 @@ def exp5():
     # plt.show()
 
 
-def exp6():
-    g0 = nx.Graph()
-    g0.add_node(0)
-    g1 = create_graph([(0, 1), (0, 2), (0, 2), (1, 2), (1, 3), (2, 3), (3, 4)])
-    print(ged(g0, g1, 'hungarian'))
-
-
-def exp7():
-    # Run baselines. Take a while.
+def exp4():
+    """ Run baselines on real datasets. Take a while. """
     dataset = 'aids10k'
-    model = 'beam5'
+    model = 'beam40'
     row_graphs = load_data(dataset, train=False)
     col_graphs = load_data(dataset, train=True)
-    num_cpu = 10
+    num_cpu = prompt_get_cpu()
     exec_turnoff_print()
-    exp7_helper(dataset, model, row_graphs, col_graphs, num_cpu)
+    real_dataset_run_helper(dataset, model, row_graphs, col_graphs, num_cpu)
 
 
-def exp7_helper(dataset, model, row_graphs, col_graphs, num_cpu):
+def real_dataset_run_helper(dataset, model, row_graphs, col_graphs, num_cpu):
     m = len(row_graphs.graphs)
     n = len(col_graphs.graphs)
     ged_mat = np.zeros((m, n))
@@ -254,18 +251,18 @@ def print_progress(i, j, m, n, label):
     print('----- {} progress: {}/{}={:.1%}'.format(label, cur, tot, cur / tot))
 
 
-def exp8():
-    # Plot ged and time.
+def exp5():
+    """ Plot ged and time. """
     dataset = 'aids50'
     models = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
               'hungarian', 'vj']
     rs = load_results_as_dict(dataset, models)
     metrics = [Metric('ged', 'ged'), Metric('time', 'time (msec)')]
     for metric in metrics:
-        exp8_helper(dataset, models, metric, rs)
+        plot_ged_time_helper(dataset, models, metric, rs)
 
 
-def exp8_helper(dataset, models, metric, rs):
+def plot_ged_time_helper(dataset, models, metric, rs):
     font = {'family': 'serif',
             'size': 22}
     matplotlib.rc('font', **font)
@@ -301,31 +298,29 @@ def get_test_graph_sizes(dataset):
     return [g.number_of_nodes() for g in test_data.graphs]
 
 
-def exp9():
-    # Plot ap@k.
+def exp6():
+    """ Plot ap@k. """
     dataset = 'aids50'
     models = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
               'hungarian', 'vj']
     true_model = 'beam80'
     metric = 'ap@k'
     norms = [True, False]
+    rs = load_results_as_dict(dataset, models)
+    true_result = rs[true_model]
     for norm in norms:
-        rs = load_results_as_dict(dataset, models)
-        true_result = rs[true_model]
-
         ks = []
         k = 1
-        while k < true_result.ged_mat(norm).shape[1]:
+        _, n = true_result.m_n()
+        while k < n:
             ks.append(k)
             k *= 2
-        exp9_helper(dataset, models, rs, true_result, metric, norm, ks, True)
-
+        plot_apk_helper(dataset, models, rs, true_result, metric, norm, ks, True)
         ks = range(1, 31)
-        exp9_helper(dataset, models, rs, true_result, metric, norm, ks, False)
+        plot_apk_helper(dataset, models, rs, true_result, metric, norm, ks, False)
 
 
-def exp9_helper(dataset, models, rs, true_result, metric, norm, ks, logscale):
-    # print_ids = range(true_mat.shape[0])
+def plot_apk_helper(dataset, models, rs, true_result, metric, norm, ks, logscale):
     print_ids = []
     font = {'family': 'serif',
             'size': 22}
@@ -365,8 +360,55 @@ def get_norm_str(norm):
         return 'nonorm'
 
 
-def exp10():
-    # Query visualization.
+def exp7():
+    """ Plot mrr. """
+    dataset = 'aids50'
+    models = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
+              'hungarian', 'vj']
+    true_model = 'beam80'
+    metric = 'mrr'
+    norms = [True, False]
+    rs = load_results_as_dict(dataset, models)
+    true_result = rs[true_model]
+    for norm in norms:
+        plot_mrr_helper(dataset, models, rs, true_result, metric, norm)
+
+
+def plot_mrr_helper(dataset, models, rs, true_result, metric, norm):
+    print_ids = []
+    font = {'family': 'serif',
+            'size': 22}
+    matplotlib.rc('font', **font)
+    plt.figure(figsize=(16, 10))
+    for model in models:
+        print(model)
+        mrr = mean_reciprocal_rank(true_result, rs[model], norm, print_ids)
+        print('mrr {}: {}'.format(model, mrr))
+    #     if logscale:
+    #         pltfunc = plt.semilogx
+    #     else:
+    #         pltfunc = plt.plot
+    #     pltfunc(ks, aps, **args1[model])
+    #     plt.scatter(ks, aps, s=200, label=model, **args2[model])
+    # plt.xlabel('k')
+    # # ax = plt.gca()
+    # # ax.set_xticks(ks)
+    # plt.ylabel(metric)
+    # plt.ylim([-0.06, 1.06])
+    # plt.legend(loc='best', ncol=2)
+    # plt.grid(linestyle='dashed')
+    # plt.tight_layout()
+    # # plt.show()
+    # kss = 'k_{}_{}'.format(min(ks), max(ks))
+    # sp = get_result_path() + '/{}/{}/ged_{}_{}_{}_{}_{}.png'.format( \
+    #     dataset, metric, metric, dataset, '_'.join(models), kss,
+    #     get_norm_str(norm))
+    # plt.savefig(sp)
+    # print('Saved to {}'.format(sp))
+
+
+def exp8():
+    """ Query visualization. """
     dataset = 'aids10k'
     model = 'graph2vec'
     true_model = 'beam80'
@@ -401,7 +443,7 @@ def exp10():
     r = load_result(dataset, model)
     tr = load_result(dataset, true_model)
     for norm in norms:
-        ids = r.ged_sort_id_mat(norm)
+        ids = r.sort_id_mat(norm)
         m, n = r.m_n()
         train_data = load_data(dataset, train=True)
         test_data = load_data(dataset, train=False)
@@ -433,7 +475,7 @@ def get_text_label(r, tr, qid, gid, g, model, norm, is_query):
     if is_query:
         rtn += '\nquery\nmodel: {}'.format(model)
     else:
-        ged_sim_str, ged_sim = r.ged_sim(qid, gid, norm)
+        ged_sim_str, ged_sim = r.dist_sim(qid, gid, norm)
         if ged_sim_str == 'ged':
             ged_str = get_ged_select_norm_str(r, qid, gid, norm)
             rtn += '\n {}: {}\n'.format(ged_sim_str, ged_str)
@@ -448,8 +490,8 @@ def get_text_label(r, tr, qid, gid, g, model, norm, is_query):
 
 
 def get_ged_select_norm_str(r, qid, gid, norm):
-    ged = r.ged_sim(qid, gid, norm=False)[1]
-    norm_ged = r.ged_sim(qid, gid, norm=True)[1]
+    ged = r.dist_sim(qid, gid, norm=False)[1]
+    norm_ged = r.dist_sim(qid, gid, norm=True)[1]
     if norm:
         return '{:.2f} ({})'.format(norm_ged, ged)
     else:
