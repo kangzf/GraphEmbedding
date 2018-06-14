@@ -8,8 +8,11 @@ import sys
 import random
 from os.path import dirname, abspath, exists
 sys.path.append("{}/..".format(dirname(dirname(abspath(__file__)))))
-from src.utils import load_data
+# from src.utils import load_data, get_root_path, exec, get_ts
+# from src.nx_to_gxl import nx_to_gxl
+from src import *
 from src.distance import ged
+
 
 random.seed(123)
 
@@ -82,6 +85,12 @@ def data_load(dataset_str, sample_num):
     train = load_data(dataset_str, train=True)
     test = load_data(dataset_str, train=False)
 
+    #----------for test only---------------------
+    temp_i = range(5)
+    train.graphs = [train.graphs[i] for i in temp_i]
+    test.graphs = [test.graphs[0]]
+    #--------------------------------------------
+
     train_sam, idx = sampling(train.graphs, sample_num)
 
     # Parse node feature pool, save & One hot encoding node feature
@@ -137,7 +146,7 @@ def data_load(dataset_str, sample_num):
         y_train = train.GED_sym_cal(train_sam)
         save_obj(y_train,save_path+'/train_GED'+sample_num+'.pkl')
 
-return adj_train, feature_train, adj_test, feature_test, y_train, y_test, adj_all, feature_all, idx
+    return adj_train, feature_train, adj_test, feature_test, y_train, y_test, adj_all, feature_all, idx
 
 def parse_index_file(filename):
     """Parse index file."""
