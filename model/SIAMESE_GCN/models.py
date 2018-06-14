@@ -113,10 +113,3 @@ class GCNTN(Model):
             self.loss += FLAGS.weight_decay * tf.nn.l2_loss(var)
         # L2 loss
         self.loss += tf.nn.l2_loss(self.placeholders['labels']-self.outputs)
-
-
-
-
-
-
-
