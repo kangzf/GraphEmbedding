@@ -5,56 +5,139 @@ import scipy.sparse as sp
 from scipy.sparse.linalg.eigen.arpack import eigsh
 import sys
 
-import os.path
-sys.path.append("../..")
+import random
+from os.path import dirname, abspath, exists
+sys.path.append("{}/..".format(dirname(dirname(abspath(__file__)))))
 from src.utils import load_data
+from src.distance import ged
 
-# TODO: Sampling based on graph density distribution
+random.seed(123)
+
+# TODO_1: Sampling based on graph density distribution
 def sampling(graphs, sample_num):
     # measure graph density
-    density = [nx.density[g] for g in graphs]
+    # density = [nx.density[g] for g in graphs]
+    # idx = [] 
 
     # TODO: Get the sample index based on distribution
-    idx = [] 
-    return [graphs[i] for i in idx]
+    idx = random.sample(range(0, len(graphs)), sample_num) 
+    return [graphs[i] for i in idx], idx
 
-def extract_features(adj, feature, graph_list):
+def all_node_feature(graph_list):
+    f_set = set()
+    for g in graph_list:
+        f_set = f_set | set(nx.get_node_attributes(g,'type').values())
+    return f_set
+
+def one_hot_encode(f_set):
+    from sklearn.preprocessing import OneHotEncoder
+    dic = {k: v for v, k in enumerate(f_set)}
+    oe = OneHotEncoder().fit(np.array(list(dic.values())).reshape(-1,1))
+    return dic, oe
+
+def check_dir(path):
+    if not exists(path):
+        from os import mkdir
+        mkdir(path)
+
+def extract_features(dic, oe, graph_list):
+    adj = []
+    feature = []
     for g in graph_list:
         adj.append(nx.adjacency_matrix(g))
-        # TODO: one-hot encoding features
-        feature.append()
-    return [adj, feature]
+        temp_attr = nx.get_node_attributes(g,'type')
+        temp_mat =  oe.transform(np.array([dic[temp_attr[i]] for i in g.nodes()]).reshape(-1,1)).toarray()
+        feature.append(sp.csr_matrix(temp_mat))
+    return adj, feature
 
-def save_sample_GED(sample_num, ged_mat):
-    np.savetxt("train_GED"+sample_num+".csv", ged_mat, delimiter=",")
+def save_obj(obj, file_path):
+    with open(file_path, 'wb') as f:
+        pkl.dump(obj, f, pkl.HIGHEST_PROTOCOL)
+
+def load_obj(file_path):
+    with open(file_path, 'rb') as f:
+        return pkl.load(f)
+
+# GED_cal GED_sym_cal can be same func
+def GED_cal(graphs1, graphs2, pre_mat=None): # prd
+    ged_mat = np.zeros((len(graphs_1),len(graphs2)))
+    for row, g1 in enumerate(graphs1):
+        for col, g2 in enumerate(graphs2):
+            ged_temp = ged(g1, g2, 'beam80')
+            if ged_temp[0] == -1: continue
+            ged_mat[row][col] = ged_mat[col][row] = ged_temp[0]
+    return ged_mat
+
+def GED_sym_cal(graphs, pre_mat=None): # prd
+    ged_mat = np.zeros((len(graphs),len(graphs)))
+    for row, g1 in enumerate(graphs):
+        for col, g2 in enumerate(graphs):
+            if col<=row: continue
+            ged_temp = ged(g1, g2, 'beam80')
+            if ged_temp[0] == -1: continue
+            ged_mat[row][col] = ged_mat[col][row] = ged_temp[0]
+    return ged_mat
 
 def data_load(dataset_str, sample_num):
     train = load_data(dataset_str, train=True)
     test = load_data(dataset_str, train=False)
 
-    train.graphs = sampling(train.graphs, sample_num)
+    train_sam, idx = sampling(train.graphs, sample_num)
 
+    # Parse node feature pool, save & One hot encoding node feature
+    save_path = dirname(abspath(__file__))+'/'+dataset_str+'/encode'
+    check_dir(save_path)
+    if not exists(save_path+'/node_feature.pkl'):
+        f_set = all_node_feature(train.graphs + test.graphs)
+        save_obj(f_set, save_path+'/node_feature.pkl')
+    else:
+        f_set = load_obj(save_path+'/node_feature.pkl')
+
+    dic, oe = one_hot_encode(f_set)
+
+    # Extract graph features and save
     # lists of scipy sparse matrices
-    adj_train = [] 
-    feature_train = []
-    adj_test = []
-    feature_test = []
-
-    adj_train, feature_train = extract_features(adj_train, feature_train, train.graphs, sample_num) 
-    adj_test, feature_test = extract_features(adj_test, feature_test, test.graphs, sample_num)
-
-    # Ground Truth calculation and save
-    if os.path.exists("test_GED.csv"):
-        y_test = np.loadtxt("test_GED.csv", delimiter=",")
+    save_path = dirname(abspath(__file__))+'/'+dataset_str+'/extract_features'
+    check_dir(save_path)
+    if not exists(save_path+'/train_adj.pkl'):
+        adj_all, feature_all = extract_features(dic, oe, train.graphs)
+        save_obj(adj_all, save_path+'/train_adj.pkl')
+        save_obj(feature_all, save_path+'/train_feature.pkl')
     else:
-        y_test = test.get_dist_mat(test.graphs, test.graphs)
-        np.savetxt("test_GED.csv", y_test, delimiter=",")
+        adj_all = load_obj(save_path+'/train_adj.pkl')
+        feature_all = load_obj(save_path+'/train_feature.pkl')
 
-    if os.path.exists("train_GED"+sample_num+".csv"):
-        y_train = np.loadtxt("train_GED"+sample_num+".csv", delimiter=",")
+    adj_train = [adj_all[i] for i in idx]
+    feature_train = [feature_all[i] for i in idx]
+
+    if not exists(save_path+'/test_adj.pkl'):
+        adj_test, feature_test = extract_features(dic, oe, test.graphs)
+        save_obj(adj_test, save_path+'/test_adj.pkl')
+        save_obj(feature_test, save_path+'/test_feature.pkl')
     else:
-        y_train = train.get_dist_mat(train_data.graphs, train.graphs)
-        save_sample_GED(sample_num, y_train)
+        adj_test = load_obj(save_path+'/test_adj.pkl')
+        feature_test = load_obj(save_path+'/test_feature.pkl')
+    
+    # GED ground truth calculation and save
+    save_path = dirname(abspath(__file__))+'/'+dataset_str+'/GED'
+    check_dir(save_path)
+    if not exists(save_path+'/test_GED.pkl'): # Add test GED file name calculated by Yunsheng Bai
+        y_test = GED_cal(test.graphs, train.graphs)
+        save_obj(y_test, save_path+'/test_GED.pkl')
+    else:
+        y_test = load_obj(save_path+'/test_GED.pkl')
+
+    # TODO_2: incremental for efficiency based on max_sample
+    # max_sample number, so no need to cal the first max_sample GED
+    max_sample = 0 if not exists(save_path+'/max_sample.pkl') else load_obj(save_path+'/max_sample.pkl')
+
+    if not exists(save_path+"/train_GED"+sample_num+".pkl"):
+        y_train = load_obj(save_path+'/train_GED'+sample_num+'.pkl')
+    else:
+        y_train = train.GED_sym_cal(train_sam)
+        save_obj(y_train,save_path+'/train_GED'+sample_num+'.pkl')
+
+return adj_train, feature_train, adj_test, feature_test, y_train, y_test, adj_all, feature_all
 
 
 
