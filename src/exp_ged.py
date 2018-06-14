@@ -1,19 +1,23 @@
 #!/usr/bin/env python3
-from utils import get_root_path, get_result_path, load_data, get_ts, \
-    exec_turnoff_print, tmux, tmux_shell
+from utils import get_result_path, load_data, get_ts, \
+    exec_turnoff_print, get_computer_name, check_nx_version
+from metrics import Metric, precision_at_ks
 from distance import ged
 from result import load_results_as_dict, load_result
-# from vis import vis
 import networkx as nx
+
+check_nx_version()
 import multiprocessing as mp
 from os import cpu_count
 from time import time
 from random import randint, uniform
-# from pandas import read_csv
-# import matplotlib.pyplot as plt
-# import matplotlib
+
+if get_computer_name() == 'yba':  # local
+    from pandas import read_csv
+    import matplotlib.pyplot as plt
+    import matplotlib
+    from vis import vis
 import numpy as np
-from glob import glob
 
 args1 = {'astar': {'color': 'grey'},
          'beam5': {'color': 'deeppink'},
@@ -42,14 +46,14 @@ args2 = {'astar': {'marker': '*', 'facecolors': 'none', 'edgecolors': 'grey'},
 def exp1():
     g0 = create_graph([(0, 1), (1, 2), (2, 3), (3, 4), (4, 0), (0, 5)])
     g1 = create_graph([(0, 1), (1, 2), (2, 3), (3, 0), (0, 4), (4, 5)])
-    # draw_graph(g0, get_root_path() + '/files/exp_g0.png')
-    # draw_graph(g1, get_root_path() + '/files/exp_g1.png')
-    print('hungarian_ged', hungarian_ged(g0, g1))
-    print('astar_ged', astar_ged(g0, g1))
+    # draw_graph(g0, get_result_path() + '/syn/exp1_g0.png')
+    # draw_graph(g1, get_result_path() + '/syn/exp1_g1.png')
+    print('hungarian_ged', ged(g0, g1, 'hungarian'))
+    print('astar_ged', ged(g0, g1, 'astar'))
     nx.set_node_attributes(g0, 'label', {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0})
     nx.set_node_attributes(g1, 'label', {0: 1, 1: 1, 2: 1, 3: 1, 4: 0, 5: 1})
-    print('hungarian_ged', hungarian_ged(g0, g1))
-    print('astar_ged', astar_ged(g0, g1))
+    print('hungarian_ged', ged(g0, g1, 'hungarian'))
+    print('astar_ged', ged(g0, g1, 'astar'))
 
 
 def exp2():
@@ -58,8 +62,8 @@ def exp2():
     g1 = create_graph([(0, 1)])
     nx.set_node_attributes(g0, 'label', {0: 0})
     nx.set_node_attributes(g1, 'label', {0: 0, 1: 1})
-    print('hungarian_ged', hungarian_ged(g0, g1))
-    print('astar_ged', astar_ged(g0, g1))
+    print('hungarian_ged', ged(g0, g1, 'hungarian'))
+    print('astar_ged', ged(g0, g1, 'astar'))
 
 
 def exp3():
@@ -67,7 +71,7 @@ def exp3():
     g1 = create_graph([(0, 1)])
     nx.set_node_attributes(g0, 'label', {0: 1, 1: 1, 2: 0})
     nx.set_node_attributes(g1, 'label', {0: 1, 1: 0})
-    print(hungarian_ged(g0, g1))
+    print(ged(g0, g1, 'hungarian'))
 
 
 def create_graph(edges):
@@ -81,7 +85,7 @@ def exp4():
     ms = ['astar', 'beam5', 'beam10', 'beam20', 'beam40', 'beam80',
           'hungarian', 'vj']
     fn = '_'.join(ms)
-    file = open(get_root_path() + '/files/ged_{}_{}.csv'.format(fn, get_ts()),
+    file = open(get_result_path() + '/ged_{}_{}.csv'.format(fn, get_ts()),
                 'w')
     xs = [10]
     ys = list(range(10, 141, 10))
@@ -136,7 +140,7 @@ def exp5():
             'size': 22}
     matplotlib.rc('font', **font)
     file = 'ged_astar_beam5_beam10_beam20_beam40_beam80_hungarian_vj_2018-04-29T14:56:38.676491'
-    data = read_csv(get_root_path() + '/files/{}.csv'.format(file))
+    data = read_csv(get_result_path() + '/syn/{}.csv'.format(file))
     models = []
     for model in data.columns.values:
         if 'time' in model:
@@ -159,7 +163,7 @@ def exp5():
     plt.legend(loc='best')
     plt.grid(linestyle='dashed')
     plt.tight_layout()
-    plt.savefig(get_root_path() + '/files/{}_time.png'.format(file))
+    plt.savefig(get_result_path() + '/syn/{}_time.png'.format(file))
     # plt.show()
     plt.figure(1)
     plt.figure(figsize=(11, 11))
@@ -172,7 +176,7 @@ def exp5():
     plt.legend(loc='best')
     plt.grid(linestyle='dashed')
     plt.tight_layout()
-    plt.savefig(get_root_path() + '/files/{}_ged.png'.format(file))
+    plt.savefig(get_result_path() + '/syn/{}_ged.png'.format(file))
     # plt.show()
 
 
@@ -180,41 +184,27 @@ def exp6():
     g0 = nx.Graph()
     g0.add_node(0)
     g1 = create_graph([(0, 1), (0, 2), (0, 2), (1, 2), (1, 3), (2, 3), (3, 4)])
-    print(hungarian_ged(g0, g1))
-
-
-# def exp7_tmux():
-#     # Run baselines. Take a while.
-#     dataset = 'aids10k'
-#     models = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
-#               'hungarian', 'vj']
-#     computer_name = 'yba'
-#     row_graphs = load_data(dataset, train=False)
-#     col_graphs = load_data(dataset, train=True)
-#     num_cpu = 6
-#     exec_turnoff_print()
-#     for model in models:
-#         exp7_helper(dataset, model, row_graphs, col_graphs, computer_name, num_cpu)
+    print(ged(g0, g1, 'hungarian'))
 
 
 def exp7():
     # Run baselines. Take a while.
     dataset = 'aids10k'
     model = 'beam80'
-    computer_name = 'yba'
     row_graphs = load_data(dataset, train=False)
     col_graphs = load_data(dataset, train=True)
     num_cpu = 8
     exec_turnoff_print()
-    exp7_helper(dataset, model, row_graphs, col_graphs, computer_name, num_cpu)
+    exp7_helper(dataset, model, row_graphs, col_graphs, num_cpu)
 
 
-def exp7_helper(dataset, model, row_graphs, col_graphs, computer_name, num_cpu):
+def exp7_helper(dataset, model, row_graphs, col_graphs, num_cpu):
     m = len(row_graphs.graphs)
     n = len(col_graphs.graphs)
     ged_mat = np.zeros((m, n))
     time_mat = np.zeros((m, n))
     outdir = '{}/{}'.format(get_result_path(), dataset)
+    computer_name = get_computer_name()
     csv_fn = '{}/csv/ged_{}_{}_{}_{}_{}cpus.csv'.format( \
         outdir, dataset, model, get_ts(), computer_name, num_cpu)
     file = open(csv_fn, 'w')
@@ -232,7 +222,7 @@ def exp7_helper(dataset, model, row_graphs, col_graphs, computer_name, num_cpu):
             results[i][j] = pool.apply_async( \
                 ged, args=(g1, g2, model, True, True,))
         print_progress(i, j, m, n, 'submit: {} {} cpus;'.format(model, num_cpu))
-    # Retreve results from pool workers.
+    # Retrieve results from pool workers.
     for i in range(m):
         for j in range(n):
             print_progress(i, j, m, n, 'work: {} {} cpus;'.format(model, num_cpu))
@@ -264,18 +254,9 @@ def print_progress(i, j, m, n, label):
     print('----- {} progress: {}/{}={:.1%}'.format(label, cur, tot, cur / tot))
 
 
-class Metric(object):
-    def __init__(self, name, ylabel):
-        self.name = name
-        self.ylabel = ylabel
-
-    def __str__(self):
-        return self.name
-
-
 def exp8():
     # Plot ged and time.
-    dataset = 'aids10k'
+    dataset = 'aids10k_small'
     models = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
               'hungarian', 'vj']
     rs = load_results_as_dict(dataset, models)
@@ -296,7 +277,7 @@ def exp8_helper(dataset, models, metric, rs):
     so = np.argsort(xs)
     xs.sort()
     for model in models:
-        mat = rs[model].mat(metric.name)
+        mat = rs[model].mat(metric.name, norm=True)
         print('plotting for {}'.format(model))
         ys = np.mean(mat, 1)[so]
         plt.plot(xs, ys, **args1[model])
@@ -309,8 +290,10 @@ def exp8_helper(dataset, models, metric, rs):
     plt.grid(linestyle='dashed')
     plt.tight_layout()
     # plt.show()
-    plt.savefig(get_root_path() + '/files/{}/{}/ged_{}_mat_{}_{}.png'.format( \
-        dataset, metric, metric, dataset, '_'.join(models)))
+    sp = get_result_path() + '/{}/{}/ged_{}_mat_{}_{}.png'.format( \
+        dataset, metric, metric, dataset, '_'.join(models))
+    plt.savefig(sp)
+    print('Saved to {}'.format(sp))
 
 
 def get_test_graph_sizes(dataset):
@@ -320,7 +303,7 @@ def get_test_graph_sizes(dataset):
 
 def exp9():
     # Plot ap@k.
-    dataset = 'aids10k'
+    dataset = 'aids10k_small'
     models = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
               'hungarian', 'vj', 'graph2vec']
     true_model = 'beam80'
@@ -368,7 +351,7 @@ def exp9_helper(dataset, models, rs, true_result, metric, norm, ks, logscale):
     plt.tight_layout()
     # plt.show()
     kss = 'k_{}_{}'.format(min(ks), max(ks))
-    sp = get_root_path() + '/files/{}/{}/ged_{}_{}_{}_{}_{}.png'.format( \
+    sp = get_result_path() + '/{}/{}/ged_{}_{}_{}_{}_{}.png'.format( \
         dataset, metric, metric, dataset, '_'.join(models), kss,
         get_norm_str(norm))
     plt.savefig(sp)
@@ -380,21 +363,6 @@ def get_norm_str(norm):
         return 'norm'
     else:
         return 'nonorm'
-
-
-def precision_at_ks(true_r, pred_r, norm, ks, print_ids=[]):
-    m, n = true_r.m_n()
-    assert (true_r.m_n() == pred_r.m_n())
-    ps = np.zeros((m, len(ks)))
-    for i in range(m):
-        for k_idx, k in enumerate(ks):
-            assert (type(k) is int and k > 0 and k < n)
-            true_ids = true_r.top_k_ids(i, k, norm, inclusive=True)
-            pred_ids = pred_r.top_k_ids(i, k, norm, inclusive=False)
-            ps[i][k_idx] = len(set(true_ids).intersection(set(pred_ids))) / k
-        if i in print_ids:
-            print('query {}\nks:    {}\nprecs: {}'.format(i, ks, ps[i]))
-    return np.mean(ps, axis=0)
 
 
 def exp10():
@@ -447,8 +415,8 @@ def exp10():
                                 train_data.graphs[j], model, norm, False) \
                  for j in gids]
             info_dict['plot_save_path'] = \
-                get_root_path() + \
-                '/files/{}/query_vis/{}/query_vis_{}_{}_{}_{}.png'.format( \
+                get_result_path() + \
+                '/{}/query_vis/{}/query_vis_{}_{}_{}_{}.png'.format( \
                     dataset, model, dataset, model, i, get_norm_str(norm))
             vis(q, gs, info_dict)
 
@@ -493,4 +461,4 @@ def get_graph_stats_text(g):
         g.number_of_nodes(), g.number_of_edges(), nx.density(g))
 
 
-exp7()
+exp9()

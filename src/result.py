@@ -2,10 +2,11 @@
 Load (and post-process) result data.
 '''
 
-from utils import get_root_path, get_file_base_id, load_data, load_pkl, save_pkl
+from utils import get_result_path, get_save_path, get_model_path, \
+    get_file_base_id, load_data, load_pkl, save_pkl
 from glob import glob
 import numpy as np
-import json, pickle
+import json
 from os.path import isfile
 
 
@@ -128,7 +129,7 @@ class PairwiseGEDModelResult(Result):
         return self._select_ged_sort_id_mat(norm)
 
     def _load_result_mat(self, dataset, metric):
-        file_p = get_root_path() + '/files/{}/{}/ged_{}_mat_{}_{}_*.npy'.format( \
+        file_p = get_result_path() + '/{}/{}/ged_{}_mat_{}_{}_*.npy'.format( \
             dataset, metric, metric, dataset, self.model_)
         li = glob(file_p)
         if len(li) != 1:
@@ -180,7 +181,7 @@ class Graph2VecResult(EmbeddingBasedModelResult):
         return None
 
     def _load_sim_mat(self):
-        fn = get_root_path() + '/files/{}/sim/{}_graph2vec_dim_{}_sim_{}.npy'.format( \
+        fn = get_result_path() + '/{}/sim/{}_graph2vec_dim_{}_sim_{}.npy'.format( \
             self.dataset, self.dataset, self.dim, self.sim)
         if isfile(fn):
             with open(fn, 'rb') as handle:
@@ -199,7 +200,7 @@ class Graph2VecResult(EmbeddingBasedModelResult):
         return sim_mat
 
     def _load_emb(self, train):
-        fn = get_root_path() + '/files/{}/emb/{}_graph2vec_{}_emb_dim_{}.npy'.format( \
+        fn = get_result_path() + '/{}/emb/{}_graph2vec_{}_emb_dim_{}.npy'.format( \
             self.dataset, self.dataset, 'train' if train else 'test', self.dim)
         if isfile(fn):
             emb = np.load(fn)
@@ -223,14 +224,14 @@ class Graph2VecResult(EmbeddingBasedModelResult):
         return emb
 
     def _load_json_emb(self):
-        fn = get_root_path() + '/save/{}_graph2vec_json_dict.pkl'.format( \
+        fn = get_save_path() + '/{}_graph2vec_json_dict.pkl'.format( \
             self.dataset)
         if isfile(fn):
             with open(fn, 'rb') as handle:
                 d = load_pkl(handle)
                 print('Loaded json dict from {}'.format(fn))
                 return d
-        dfn = get_root_path() + '/graph2vec_tf/embeddings/{}_train_test_dims_{}_epochs_1000_lr_0.3_embeddings.txt'.format(
+        dfn = get_model_path() + '/graph2vec_tf/embeddings/{}_train_test_dims_{}_epochs_1000_lr_0.3_embeddings.txt'.format(
             self.dataset, self.dim)
         with open(dfn) as json_data:
             d = json.load(json_data)

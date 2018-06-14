@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-from utils import get_result_path, sorted_nicely, exec
+from utils import get_result_path, sorted_nicely, exec, prompt
 from glob import glob
 from os.path import basename, splitext
 import numpy as np
 
 # f = '/aids10k/csv/*.csv'
 f = '/aids10k/ged/*.npy'
+
 
 def clean_up():
     rp = get_result_path()
@@ -21,6 +22,7 @@ def clean_up():
             assert (False)
     print('Done')
 
+
 def print_info(file, bnf):
     ext = splitext(bnf)[1]
     if ext == '.csv':
@@ -30,13 +32,6 @@ def print_info(file, bnf):
         print('{} shape {}'.format(bnf, np.load(file).shape))
     else:
         print(ext)
-
-
-def prompt(str, options):
-    while True:
-        t = input(str)
-        if t in options:
-            return t
 
 
 clean_up()

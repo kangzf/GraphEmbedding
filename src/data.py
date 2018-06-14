@@ -1,4 +1,4 @@
-from utils import get_root_path, sorted_nicely
+from utils import get_data_path, get_save_path, sorted_nicely
 from distance import ged
 import pickle
 import networkx as nx
@@ -43,7 +43,7 @@ class Data(object):
         self.__dict__ = pickle.loads(dp)
 
     def save_filename(self):
-        return '{}/save/{}.pkl'.format(get_root_path(), self.name)
+        return '{}/{}.pkl'.format(get_save_path(), self.name)
 
     def get_dist_mat(self, graphs1, graphs2):
         dist_mat = np.zeros((len(graphs1), len(graphs2)))
@@ -95,9 +95,10 @@ class AIDS10kData(Data):
 
     def init(self):
         self.graphs = []
-        datadir = get_root_path() + '/data/AIDS10k/' + ('train' if self.train \
-            else 'test')
-        for file in sorted_nicely(glob(datadir + '/*.gexf')):
+        datadir = '{}/{}/{}'.format( \
+            get_data_path(), self.get_folder_name(), 'train' if self.train \
+                else 'test')
+        for file in self.sort()(glob(datadir + '/*.gexf')):
             gid = int(file.split('/')[-1].split('.')[0])
             g = nx.read_gexf(file)
             g.graph['gid'] = gid
@@ -106,7 +107,19 @@ class AIDS10kData(Data):
                 raise RuntimeError('{} not connected'.format(gid))
         print('Loaded {} graphs from {}'.format(len(self.graphs), datadir))
 
+    def sort(self):
+        return sorted_nicely
+
+    def get_folder_name(self):
+        return 'AIDS10k'
 
 
+class AIDS10kDataSmall(AIDS10kData):
+    def get_folder_name(self):
+        return 'AIDS10k_small'
 
+    def sort(self):
+        return self.fake_sort
 
+    def fake_sort(self, x):
+        return x

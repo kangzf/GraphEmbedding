@@ -16,6 +16,9 @@ def load_data(data, train):
     if data == 'syn':
         from data import SynData
         return SynData(train)
+    elif data == 'aids10k_small':
+        from data import AIDS10kDataSmall
+        return AIDS10kDataSmall(train)
     elif data == 'aids10k':
         from data import AIDS10kData
         return AIDS10kData(train)
@@ -34,6 +37,14 @@ def get_data_path():
 
 def get_save_path():
     return get_root_path() + '/save'
+
+
+def get_src_path():
+    return get_root_path() + '/src'
+
+
+def get_model_path():
+    return get_root_path() + '/model'
 
 
 def get_result_path():
@@ -104,14 +115,6 @@ def exec(cmd, timeout=None):
         r = RunCmd(cmd, timeout)
         r.Run()
         return r.finished
-
-
-def tmux(command):
-    exec('tmux %s' % command)
-
-
-def tmux_shell(command):
-    exec('send-keys "%s" "C-m"' % command)
 
 
 tstamp = None
@@ -210,3 +213,40 @@ def proc_filepath(filepath):
     if ext not in filepath:
         filepath += ext
     return filepath
+
+
+def prompt(str, options):
+    while True:
+        t = input(str)
+        if t in options:
+            return t
+
+
+computer_name = None
+
+
+def get_computer_name():
+    from os.path import isfile
+    global computer_name
+    if not computer_name:
+        fp = get_src_path() + '/computer_name.txt'
+        if not isfile(fp):
+            raise RuntimeError('No {} exists!'.format(fp))
+        with open(fp) as f:
+            computer_name = f.read().rstrip()
+            if '\n' in computer_name:
+                raise RuntimeError('Only one line in the computer name {}'. \
+                                   format(computer_name))
+            if not computer_name:
+                raise RuntimeError('Computer name "{}" cannot be empty'. \
+                                   format(computer_name))
+    return computer_name
+
+
+def check_nx_version():
+    import networkx as nx
+    nxvg = '1.10'
+    nxva = nx.__version__
+    if nxvg != nxva:
+        raise RuntimeError( \
+            'Wrong networkx version! Need {} instead of {}'.format(nxvg, nxva))
