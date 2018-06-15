@@ -57,24 +57,30 @@ class Model(object):
         print("Model restored from file: %s" % save_path)
 
 class GCNTN(Model):
-    def __init__(self, placeholders, input_dim, **kwargs):
+    def __init__(self, placeholders, input_dim, output_dim, yeta, **kwargs):
         super(GCNTN, self).__init__(**kwargs)
 
         self.inputs_1 = placeholders['features_1']
         self.inputs_2 = placeholders['features_2']
         self.support_1 = placeholders['support_1']
         self.support_2 = placeholders['support_2']
+        self.num_features_1_nonzero = placeholders['num_features_1_nonzero']
+        self.num_features_2_nonzero = placeholders['num_features_2_nonzero']
 
         self.num_supports = placeholders['num_supports']
 
         self.input_dim = input_dim
         # self.input_dim = self.inputs.get_shape().as_list()[1]  # To be supported in future Tensorflow versions
-        self.output_dim = placeholders['labels'].get_shape().as_list()[1]
+        self.output_dim = output_dim # placeholders['labels'].get_shape().as_list()[1]
+        self.yeta = yeta
         self.placeholders = placeholders
 
         self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)
 
         self.build()
+
+    def gaussian(self, x):
+        return tf.exp(-self.yeta*tf.square(x))
 
     def _build(self):
         with tf.variable_scope(self.name):
@@ -93,12 +99,11 @@ class GCNTN(Model):
                                    placeholders=self.placeholders,
                                    act=tf.nn.relu,
                                    dropout=True,
-                                   yeta = 1, # parameter in Gaussian function
                                    logging=self.logging))
 
         # Build sequential layer model
-        hidden_1 = self.layers[0]([self.inputs_1, self.support_1])
-        hidden_2 = self.layers[0]([self.inputs_2, self.support_2])
+        hidden_1 = self.layers[0]([self.inputs_1, self.support_1, self.num_features_1_nonzero])
+        hidden_2 = self.layers[0]([self.inputs_2, self.support_2, self.num_features_2_nonzero])
         self.middle_1 = self.layers[1](hidden_1)
         self.middle_2 = self.layers[1](hidden_2)
         self.outputs = self.layers[2]([self.middle_1,self.middle_2])
@@ -112,4 +117,4 @@ class GCNTN(Model):
         for var in self.layers[0].vars.values():
             self.loss += FLAGS.weight_decay * tf.nn.l2_loss(var)
         # L2 loss
-        self.loss += tf.nn.l2_loss(self.placeholders['labels']-self.outputs)
+        self.loss += tf.nn.l2_loss(self.gaussian(self.placeholders['labels'])-self.gaussian(self.outputs))
