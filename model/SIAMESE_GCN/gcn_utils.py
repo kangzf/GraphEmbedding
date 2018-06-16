@@ -9,7 +9,6 @@ import random
 from os.path import dirname, abspath, exists
 sys.path.insert(0, "{}/../src".format(dirname(dirname(abspath(__file__)))))
 from utils import load_data
-# from src.nx_to_gxl import nx_to_gxl
 from distance import ged
 
 
@@ -67,7 +66,7 @@ def GED_cal(graphs1, graphs2, pre_mat=None): # prd
         for col, g2 in enumerate(graphs2):
             ged_temp = ged(g1, g2, 'beam80')
             if ged_temp[0] == -1: continue
-            ged_mat[row][col] = ged_mat[col][row] = ged_temp[0]
+            ged_mat[row][col] = ged_temp[0]
     return ged_mat
 
 def GED_sym_cal(graphs, pre_mat=None): # prd
@@ -84,14 +83,9 @@ def data_load(dataset_str, sample_num):
     train = load_data(dataset_str, train=True)
     test = load_data(dataset_str, train=False)
 
-    #----------for test only---------------------
-    temp_i = range(5)
-    train.graphs = [train.graphs[i] for i in temp_i]
-    test.graphs = [test.graphs[0]]
-    #--------------------------------------------
-
     train_sam, idx = sampling(train.graphs, sample_num)
 
+    check_dir(dirname(abspath(__file__))+'/'+dataset_str)
     # Parse node feature pool, save & One hot encoding node feature
     save_path = dirname(abspath(__file__))+'/'+dataset_str+'/encode'
     check_dir(save_path)
@@ -102,6 +96,7 @@ def data_load(dataset_str, sample_num):
         f_set = load_obj(save_path+'/node_feature.pkl')
 
     dic, oe = one_hot_encode(f_set)
+    input_dim = oe.transform([[0]]).shape[1]
 
     # Extract graph features and save
     # lists of scipy sparse matrices
@@ -139,13 +134,13 @@ def data_load(dataset_str, sample_num):
     # max_sample number, so no need to cal the first max_sample GED
     max_sample = 0 if not exists(save_path+'/max_sample.pkl') else load_obj(save_path+'/max_sample.pkl')
 
-    if not exists(save_path+"/train_GED"+sample_num+".pkl"):
-        y_train = load_obj(save_path+'/train_GED'+sample_num+'.pkl')
+    if not exists(save_path+"/train_GED"+str(sample_num)+".pkl"):
+        y_train = GED_sym_cal(train_sam)
+        save_obj(y_train,save_path+'/train_GED'+str(sample_num)+'.pkl')
     else:
-        y_train = train.GED_sym_cal(train_sam)
-        save_obj(y_train,save_path+'/train_GED'+sample_num+'.pkl')
+        y_train = load_obj(save_path+'/train_GED'+str(sample_num)+'.pkl')
 
-    return adj_train, feature_train, adj_test, feature_test, y_train, y_test, adj_all, feature_all, idx
+    return adj_train, feature_train, adj_test, feature_test, y_train, y_test, adj_all, feature_all, idx, input_dim
 
 def parse_index_file(filename):
     """Parse index file."""
@@ -286,7 +281,8 @@ def construct_feed_dict(features_1,features_2, support_1, support_2, labels, pla
     feed_dict.update({placeholders['support_1'][i]: support_1[i] for i in range(len(support_1))})
     feed_dict.update({placeholders['support_2'][i]: support_2[i] for i in range(len(support_2))})
     feed_dict.update({placeholders['num_supports']: len(support_1)})
-    feed_dict.update({placeholders['num_features_nonzero']: features_1[1].shape})
+    feed_dict.update({placeholders['num_features_1_nonzero']: features_1[1].shape})
+    feed_dict.update({placeholders['num_features_2_nonzero']: features_2[1].shape})
     return feed_dict
 
 

@@ -17,7 +17,7 @@ tf.set_random_seed(seed)
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 flags.DEFINE_string('dataset', 'aids10k', 'Dataset string.')
-flags.DEFINE_integer('sample_num', 2, 'number of samples from train set')
+flags.DEFINE_integer('sample_num', 3, 'number of samples from train set')
 flags.DEFINE_string('model', 'gcntn', 'Model string.')  # 'gcntn', gcn', 'gcn_cheby', 'dense'
 flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
 flags.DEFINE_integer('epochs', 1000000000, 'Number of epochs to train.')
@@ -28,9 +28,10 @@ flags.DEFINE_float('dropout', 0.5, 'Dropout rate (1 - keep probability).')
 flags.DEFINE_float('weight_decay', 5e-4, 'Weight for L2 loss on embedding matrix.')
 flags.DEFINE_integer('early_stopping', 10, 'Tolerance for early stopping (# of epochs).')
 flags.DEFINE_integer('max_degree', 3, 'Maximum Chebyshev polynomial degree.')
+flags.DEFINE_integer('yeta', 1, 'yeta for gaussian function')
 flags.DEFINE_boolean('mini_batch', False, 'Use Mini_batch')
 
-adj_train, feature_train, adj_test, feature_test, y_train, y_test, adj_all, feature_all, idx = data_load(FLAGS.dataset, FLAGS.sample_num)
+adj_train, feature_train, adj_test, feature_test, y_train, y_test, adj_all, feature_all, idx, input_dim = data_load(FLAGS.dataset, FLAGS.sample_num)
 
 # toy case test
 # features_1 = sparse.csr_matrix(np.array([[1.,2.,3.],[3.,4.,5.]]))
@@ -80,15 +81,15 @@ placeholders = {
     'num_supports': tf.placeholder(tf.int32),
     'labels': tf.placeholder(tf.float32, shape = None), # shape=(None, y_train.shape[1])
     'dropout': tf.placeholder_with_default(0., shape=()),
-    'num_features_nonzero': tf.placeholder(tf.int32)  # helper variable for sparse dropout
+    'num_features_1_nonzero': tf.placeholder(tf.int32),  # helper variable for sparse dropout
+    'num_features_2_nonzero': tf.placeholder(tf.int32)  # helper variable for sparse dropout
 }
 
 # Create model
-model = model_func(placeholders, input_dim=features_1[2][1], logging=True)
+model = model_func(placeholders, input_dim=input_dim, output_dim=FLAGS.hidden1, yeta = FLAGS.yeta, logging=True) # features_1[2][1]
 
 # Initialize session
 sess = tf.Session()
-
 
 # Define model evaluation function
 def evaluate(features_1, features_2, support_1, support_2, labels, placeholders):
@@ -121,12 +122,12 @@ for epoch in range(FLAGS.epochs):
             cost_train.append(outs[1])
 
     # Validation
-    cost, duration = evaluate(prefeatures_val, prefeatures_val, presupport_val, presupport_val, y_val, placeholders)
-    cost_val.append(cost)
+    # cost, duration = evaluate(prefeatures_val, prefeatures_val, presupport_val, presupport_val, y_val, placeholders)
+    # cost_val.append(cost)
 
     # Print results
-    print("Epoch:", '%04d' % (epoch + 1), "train_loss=", "{:.5f}".format(outs[1]),
-          "val_loss=", "{:.5f}".format(cost), "time=", "{:.5f}".format(time.time() - t))
+    print("Epoch:", '%04d' % (epoch + 1), "train_loss=", "{:.5f}".format(sum(cost_train)/float(len(cost_train))), "time=", "{:.5f}".format(time.time() - t))
+          # "val_loss=", "{:.5f}".format(cost), "time=", "{:.5f}".format(time.time() - t))
 
     # Early stopping
     # if epoch > FLAGS.early_stopping and cost_val[-1] > np.mean(cost_val[-(FLAGS.early_stopping+1):-1]):

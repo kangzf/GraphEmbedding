@@ -148,8 +148,6 @@ class GraphConvolution(Layer):
         self.support = None
 
         # helper variable for sparse dropout
-        self.num_features_nonzero = placeholders['num_features_nonzero']
-
         with tf.variable_scope(self.name + '_vars'):
             for i in range(num_supports):
                 self.vars['weights_' + str(i)] = glorot([input_dim, output_dim],
@@ -163,10 +161,11 @@ class GraphConvolution(Layer):
     def _call(self, inputs):
         x = inputs[0]
         self.support = inputs[1]
+        num_features_nonzero = inputs[2]
 
         # dropout
         if self.sparse_inputs:
-            x = sparse_dropout(x, 1-self.dropout, self.num_features_nonzero)
+            x = sparse_dropout(x, 1-self.dropout, num_features_nonzero)
         else:
             x = tf.nn.dropout(x, 1-self.dropout)
 
@@ -216,13 +215,12 @@ class Average(Layer):
 class NTN(Layer):
     """Dense layer."""
     def __init__(self, input_dim, feature_map_dim, placeholders, dropout=0.,
-                 sparse_inputs=False, act=tf.nn.relu, bias=True, yeta=1, **kwargs):
+                 sparse_inputs=False, act=tf.nn.relu, bias=True, **kwargs):
         super(NTN, self).__init__(**kwargs)
 
         self.sparse_inputs = sparse_inputs
         self.feature_map_dim = feature_map_dim
         self.bias = bias
-        self.yeta = yeta
 
         if dropout:
             self.dropout = placeholders['dropout']
@@ -243,9 +241,6 @@ class NTN(Layer):
 
         if self.logging:
             self._log_vars()
-
-    def gaussian(self, x):
-        return tf.exp(-self.yeta*tf.square(x))
 
     def _call(self, inputs):
         # x_1 = tf.sparse_to_dense(inputs[0]) 
@@ -301,4 +296,4 @@ class NTN(Layer):
         # tensor_bi_product = self.U*self.activation(K.reshape(
         #                     tensor_bi_product,(self.k,batch_size))).T
 
-        return self.gaussian(output)
+        return output
