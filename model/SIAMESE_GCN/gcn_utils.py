@@ -61,7 +61,7 @@ def load_obj(file_path):
 
 # GED_cal GED_sym_cal can be same func
 def GED_cal(graphs1, graphs2, pre_mat=None): # prd
-    ged_mat = np.zeros((len(graphs1),len(graphs2)))
+    ged_mat = np.zeros((len(graphs_1),len(graphs2)))
     for row, g1 in enumerate(graphs1):
         for col, g2 in enumerate(graphs2):
             ged_temp = ged(g1, g2, 'beam80')

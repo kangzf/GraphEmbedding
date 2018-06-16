@@ -106,6 +106,9 @@ class Result(object):
     def time(self, qid, gid):
         raise NotImplementedError()
 
+    def mat(self, metric, norm):
+        raise NotImplementedError()
+
     def sort_id_mat(self, norm):
         """
         :param norm:
@@ -147,6 +150,15 @@ class DistanceModelResult(Result):
 
     def time(self, qid, gid):
         return self.time_mat_[qid][gid]
+
+    def mat(self, metric, norm):
+        if metric == self.dist_metric():
+            return self._select_dist_mat(norm)
+        elif metric == 'time':
+            return self.time_mat_
+        else:
+            raise RuntimeError('Unknown metric {} for model {}'.format( \
+                metric, self.model_))
 
     def sort_id_mat(self, norm):
         return self._select_sort_id_mat(norm)
@@ -204,6 +216,13 @@ class Graph2VecResult(SimilarityBasedModelResult):
 
     def time(self, qid, gid):
         return None
+
+    def mat(self, metric, *unused):
+        if metric == 'sim':
+            return self.sim_mat_
+        else:
+            raise RuntimeError('Unknown metric {} for model {}'.format( \
+                metric, self.model_))
 
     def _load_sim_mat(self):
         fn = get_result_path() + '/{}/sim/{}_graph2vec_dim_{}_sim_{}.npy'.format( \

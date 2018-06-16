@@ -186,8 +186,8 @@ def exp3():
 
 def exp4():
     """ Run baselines on real datasets. Take a while. """
-    dataset = 'aids10k'
-    model = 'beam40'
+    dataset = 'aids50'
+    model = 'beam80'
     row_graphs = load_data(dataset, train=False)
     col_graphs = load_data(dataset, train=True)
     num_cpu = prompt_get_cpu()
@@ -380,31 +380,37 @@ def plot_mrr_helper(dataset, models, rs, true_result, metric, norm):
             'size': 22}
     matplotlib.rc('font', **font)
     plt.figure(figsize=(16, 10))
+    mrrs = []
     for model in models:
         print(model)
         mrr = mean_reciprocal_rank(true_result, rs[model], norm, print_ids)
         print('mrr {}: {}'.format(model, mrr))
-    #     if logscale:
-    #         pltfunc = plt.semilogx
-    #     else:
-    #         pltfunc = plt.plot
-    #     pltfunc(ks, aps, **args1[model])
-    #     plt.scatter(ks, aps, s=200, label=model, **args2[model])
-    # plt.xlabel('k')
-    # # ax = plt.gca()
-    # # ax.set_xticks(ks)
-    # plt.ylabel(metric)
-    # plt.ylim([-0.06, 1.06])
-    # plt.legend(loc='best', ncol=2)
-    # plt.grid(linestyle='dashed')
-    # plt.tight_layout()
-    # # plt.show()
-    # kss = 'k_{}_{}'.format(min(ks), max(ks))
-    # sp = get_result_path() + '/{}/{}/ged_{}_{}_{}_{}_{}.png'.format( \
-    #     dataset, metric, metric, dataset, '_'.join(models), kss,
-    #     get_norm_str(norm))
-    # plt.savefig(sp)
-    # print('Saved to {}'.format(sp))
+        mrrs.append(mrr)
+    ind = np.arange(len(mrrs))  # the x locations for the groups
+    width = 0.35  # the width of the bars
+    bars = plt.bar(ind, mrrs, width)
+    for i, bar in enumerate(bars):
+        bar.set_color(args1[models[i]]['color'])
+    autolabel(bars)
+    plt.xlabel('model')
+    plt.xticks(ind, models)
+    plt.ylabel(metric)
+    plt.grid(linestyle='dashed')
+    plt.tight_layout()
+    # plt.show()
+    sp = get_result_path() + '/{}/{}/ged_{}_{}_{}_{}.png'.format( \
+        dataset, metric, metric, dataset, '_'.join(models),
+        get_norm_str(norm))
+    plt.savefig(sp)
+    print('Saved to {}'.format(sp))
+
+
+def autolabel(rects):
+    for rect in rects:
+        height = rect.get_height()
+        plt.text( \
+            rect.get_x() + rect.get_width()/2., 1.005*height, \
+            '{:.2f}'.format(height), ha='center', va='bottom')
 
 
 def exp8():
