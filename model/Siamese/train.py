@@ -76,21 +76,10 @@ model = model_func(placeholders, input_dim=data.input_dim(), \
 
 sess = tf.Session()
 
-
-def evaluate(train_valid):
-    t_test = time.time()
-    loss_val = []
-    feed_dict_val = data.get_feed_dict(placeholders, 'valid')
-    temp_loss = sess.run(model.loss, feed_dict=feed_dict_val)
-    loss_val.append(temp_loss)
-    return sum(loss_val) / float(len(loss_val)), (time.time() - t_test)
-
-
 sess.run(tf.global_variables_initializer())
 
 
 def run_tf(train_val_test):
-    t = time()
     feed_dict = data.get_feed_dict(placeholders, train_val_test)
     if train_val_test == 'train':
         objs = [model.opt_op, model.loss]
@@ -98,6 +87,7 @@ def run_tf(train_val_test):
         objs = [model.loss]
     else:
         raise RuntimeError('Unknown train_val_test {}'.format(train_val_test))
+    t = time()
     outs = sess.run(objs, feed_dict=feed_dict)
     return outs[-1], time() - t
 
