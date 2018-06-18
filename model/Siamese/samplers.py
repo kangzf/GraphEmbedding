@@ -1,4 +1,4 @@
-from random import shuffle
+import random
 
 
 class Sampler(object):
@@ -19,7 +19,7 @@ class RandomSampler(Sampler):
         g1 = self.gs[self.idx]
         self.idx += 1
         if self.idx >= len(self.gs):
-            shuffle(self.gs)
+            random.Random(123).shuffle(self.gs)
             self.idx = 0
         g2 = self.gs[self.idx]
         return g1, g2

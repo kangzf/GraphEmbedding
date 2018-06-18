@@ -3,6 +3,7 @@ from __future__ import print_function
 
 from siamese_utils import check_flags
 from siamese_data import ModelData
+from dist_calculator import DistCalculator
 from models import GCNTN
 from time import time
 import numpy as np
@@ -28,6 +29,8 @@ flags.DEFINE_string('edge_feat_name', 'valence', 'Name of the edge feature.')
 flags.DEFINE_string('edge_feat_processor', None, 'How to process the edge feature.')
 """ dist_metric: ged. """
 flags.DEFINE_string('dist_metric', 'ged', 'Distance metric to use.')
+""" dist_algo: beam80 for ged. """
+flags.DEFINE_string('dist_algo', 'beam80', 'Ground-truth distance algorithm to use.')
 """ sampler: random. """
 flags.DEFINE_string('sampler', 'random', 'Sampler to use.')
 """ sample_num: 1, 2, 3, ..., None (infinite/continuous sampling). """
@@ -51,6 +54,9 @@ flags.DEFINE_integer('yeta', 1, 'yeta for the gaussian kernel function.')
 check_flags(FLAGS)
 
 data = ModelData()
+
+dist_calculator = DistCalculator(FLAGS.dataset, FLAGS.dist_metric, \
+                                 FLAGS.dist_algo)
 
 if FLAGS.model == 'gcntn':
     num_supports = 1
@@ -80,7 +86,7 @@ sess.run(tf.global_variables_initializer())
 
 
 def run_tf(train_val_test):
-    feed_dict = data.get_feed_dict(placeholders, train_val_test)
+    feed_dict = data.get_feed_dict(placeholders, dist_calculator, train_val_test)
     if train_val_test == 'train':
         objs = [model.opt_op, model.loss]
     elif train_val_test == 'val':
@@ -99,7 +105,7 @@ for epoch in range(FLAGS.epochs):
     train_costs.append(train_cost)
     train_times.append(train_time)
 
-    # Validation.
+    # Validate.
     val_cost, val_time = run_tf('val')
     val_costs.append(val_cost)
     val_times.append(val_time)

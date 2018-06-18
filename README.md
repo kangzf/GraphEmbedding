@@ -22,6 +22,7 @@ Install the following the tools and packages:
 * `beautifulsoup4`
 * `lxml`
 * `matplotlib`
+* `pytz`
 * Graph Edit Distance (GED):
     * `graph-matching-toolkit`
         * `cd src && git clone https://github.com/yunshengb/graph-matching-toolkit.git`

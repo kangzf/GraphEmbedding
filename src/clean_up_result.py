@@ -4,8 +4,8 @@ from glob import glob
 from os.path import basename, splitext
 import numpy as np
 
-# f = '/aids10k/csv/*.csv'
-f = '/aids10k/ged/*.npy'
+f = '/aids10k/csv/*.csv'
+# f = '/aids10k/ged/*.npy'
 
 
 def clean_up():

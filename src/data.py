@@ -1,4 +1,4 @@
-from utils import get_data_path, get_save_path, sorted_nicely
+from utils import get_train_str, get_data_path, get_save_path, sorted_nicely
 import pickle
 import networkx as nx
 from random import randint
@@ -6,22 +6,15 @@ from glob import glob
 
 
 class Data(object):
-    def __init__(self, train):
-        name = self.__class__.__name__ + '_'
-        self.train = True if train else False
-        if train:
-            name += 'train'
-        else:
-            name += 'test'
-        name += self.name_suffix()
+    def __init__(self, name_str):
+        name = self.__class__.__name__ + '_' + name_str + self.name_suffix()
         self.name = name
         sfn = self.save_filename()
         try:
             self.load()
             print('%s loaded from %s' % (name, sfn))
-        except Exception as e:
+        except Exception:
             self.init()
-            self.num_graphs = len(self.graphs)
             self.save()
             print('%s saved to %s' % (name, sfn))
 
@@ -52,7 +45,7 @@ class SynData(Data):
             self.num_graphs = SynData.train_num_graphs
         else:
             self.num_graphs = SynData.test_num_graphs
-        super().__init__(train)
+        super().__init__(get_train_str(train))
 
     def init(self):
         self.graphs = []
@@ -73,7 +66,7 @@ class SynData(Data):
 
 class AIDSData(Data):
     def __init__(self, train):
-        super().__init__(train)
+        super().__init__(get_train_str(train))
 
     def init(self):
         self.graphs = []

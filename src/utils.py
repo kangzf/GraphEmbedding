@@ -29,6 +29,10 @@ def load_data(data, train):
         raise RuntimeError('Not recognized data %s' % data)
 
 
+def get_train_str(train):
+    return 'train' if train else 'test'
+
+
 def get_root_path():
     from os.path import dirname, abspath
     return dirname(dirname(abspath(__file__)))
@@ -184,16 +188,6 @@ def load_as_dict(filepath):
     return load(filepath)
 
 
-def load_pkl(handle):
-    import pickle
-    return pickle.load(handle)
-
-
-def save_pkl(obj, handle):
-    import pickle
-    pickle.dump(obj, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-
 def save(filepath, obj):
     with open(proc_filepath(filepath), 'wb') as handle:
         save_pkl(obj, handle)
@@ -207,6 +201,16 @@ def load(filepath):
             return load_pkl(handle)
     else:
         return None
+
+
+def load_pkl(handle):
+    import pickle
+    return pickle.load(handle)
+
+
+def save_pkl(obj, handle):
+    import pickle
+    pickle.dump(obj, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def proc_filepath(filepath):
@@ -250,21 +254,10 @@ def parse_as_int(s):
 computer_name = None
 
 
-def get_computer_name():
-    from os.path import isfile
+def prompt_get_computer_name():
     global computer_name
     if not computer_name:
-        fp = get_src_path() + '/computer_name.txt'
-        if not isfile(fp):
-            raise RuntimeError('No {} exists!'.format(fp))
-        with open(fp) as f:
-            computer_name = f.read().rstrip()
-            if '\n' in computer_name:
-                raise RuntimeError('Only one line in the computer name {}'. \
-                                   format(computer_name))
-            if not computer_name:
-                raise RuntimeError('Computer name "{}" cannot be empty'. \
-                                   format(computer_name))
+        computer_name = prompt('What is the computer name?')
     return computer_name
 
 

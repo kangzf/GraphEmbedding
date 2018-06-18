@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-from utils import get_result_path, load_data, get_ts, \
-    exec_turnoff_print, get_computer_name, check_nx_version, prompt_get_cpu
+from utils import get_result_path, load_data, get_ts, exec_turnoff_print, \
+    prompt, prompt_get_computer_name, check_nx_version, prompt_get_cpu
 from metrics import Metric, precision_at_ks, mean_reciprocal_rank
 from distance import ged
 from results import load_results_as_dict, load_result
@@ -11,7 +11,7 @@ import multiprocessing as mp
 from time import time
 from random import randint, uniform
 
-if get_computer_name() == 'yba':  # local
+if prompt_get_computer_name() == 'yba':  # local
     from pandas import read_csv
     import matplotlib.pyplot as plt
     import matplotlib
@@ -186,8 +186,8 @@ def exp3():
 
 def exp4():
     """ Run baselines on real datasets. Take a while. """
-    dataset = 'aids50'
-    model = 'beam80'
+    dataset = prompt('Which dataset?')
+    model = prompt('Which model?')
     row_graphs = load_data(dataset, train=False)
     col_graphs = load_data(dataset, train=True)
     num_cpu = prompt_get_cpu()
@@ -201,7 +201,7 @@ def real_dataset_run_helper(dataset, model, row_graphs, col_graphs, num_cpu):
     ged_mat = np.zeros((m, n))
     time_mat = np.zeros((m, n))
     outdir = '{}/{}'.format(get_result_path(), dataset)
-    computer_name = get_computer_name()
+    computer_name = prompt_get_computer_name()
     csv_fn = '{}/csv/ged_{}_{}_{}_{}_{}cpus.csv'.format( \
         outdir, dataset, model, get_ts(), computer_name, num_cpu)
     file = open(csv_fn, 'w')
@@ -509,4 +509,4 @@ def get_graph_stats_text(g):
         g.number_of_nodes(), g.number_of_edges(), nx.density(g))
 
 
-exp7()
+exp4()

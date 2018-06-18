@@ -13,6 +13,7 @@ class Metric(object):
 
 def precision_at_ks(true_r, pred_r, norm, ks, print_ids=[]):
     """
+    Ranking-based. Prec@ks.
     :param true_r: result object indicating the ground truth.
     :param pred_r: result object indicating the prediction.
     :param norm: whether to normalize the results or not.
@@ -36,6 +37,7 @@ def precision_at_ks(true_r, pred_r, norm, ks, print_ids=[]):
 
 def mean_reciprocal_rank(true_r, pred_r, norm, print_ids=[]):
     """
+    Ranking based. MRR.
     :param true_r: result object indicating the ground truth.
     :param pred_r: result object indicating the prediction.
     :param norm: whether to normalize the results or not.
@@ -51,7 +53,7 @@ def mean_reciprocal_rank(true_r, pred_r, norm, print_ids=[]):
         # Select one with the lowest (minimum) rank
         # predicted by the pred_r model for mrr calculation.
         true_ids = true_r.top_k_ids(i, 1, norm, inclusive=True)
-        assert(len(true_ids) >= 1)
+        assert (len(true_ids) >= 1)
         min_rank = float('inf')
         for true_id in true_ids:
             pred_rank = pred_r.ranking(i, true_id, norm, one_based=True)
@@ -62,58 +64,15 @@ def mean_reciprocal_rank(true_r, pred_r, norm, print_ids=[]):
     return 1.0 / hmean(topanswer_ranks)
 
 
-def ndcg_from_ranking(y_true, ranking):
-    """Normalized discounted cumulative gain (NDCG) at rank k
-    Parameters
-    ----------
-    y_true : array-like, shape = [n_samples]
-        Ground truth (true relevance labels).
-    ranking : array-like, shape = [k]
-        Document indices, i.e.,
-            ranking[0] is the index of top-ranked document,
-            ranking[1] is the index of second-ranked document,
-            ...
-    k : int
-        Rank.
-    Returns
-    -------
-    NDCG @k : float
-    -------
-    Credit: https://gist.github.com/mblondel/7337391
+def mean_squared_error(true_r, pred_r, norm):
     """
-    k = len(ranking)
-    best_ranking = np.argsort(y_true, kind='mergesort')[::-1]
-    best = dcg_from_ranking(y_true, best_ranking[:k])
-    return dcg_from_ranking(y_true, ranking) / best
-
-
-def dcg_from_ranking(y_true, ranking):
-    """Discounted cumulative gain (DCG) at rank k
-    Parameters
-    ----------
-    y_true : array-like, shape = [n_samples]
-        Ground truth (true relevance labels).
-    ranking : array-like, shape = [k]
-        Document indices, i.e.,
-            ranking[0] is the index of top-ranked document,
-            ranking[1] is the index of second-ranked document,
-            ...
-    k : int
-        Rank.
-    Returns
-    -------
-    DCG @k : float
-    -------
-    Credit: https://gist.github.com/mblondel/7337391
+    Regression-based. L2 difference between the ground-truth similarities
+        and the predicted similarities.
+    :param true_r:
+    :param pred_r:
+    :param norm:
+    :param print_id:
+    :return:
     """
-    y_true = np.asarray(y_true)
-    ranking = np.asarray(ranking)
-    rel = y_true[ranking]
-    gains = 2 ** rel - 1
-    discounts = np.log2(np.arange(len(ranking)) + 2)
-    return np.sum(gains / discounts)
-
-
-if __name__ == '__main__':
-    print(ndcg_from_ranking([10, 1, 70], [2, 1, 0]))
-    # print(ndcg_from_ranking([2, 2, 3], [2, 1, 0]))
+    # return np.linalg.norm()
+    return 0.0

@@ -2,6 +2,7 @@ import sys
 from os.path import dirname, abspath
 
 sys.path.insert(0, "{}/../src".format(dirname(dirname(abspath(__file__)))))
+from data import Data
 from utils import load_data, exec_turnoff_print
 from samplers import RandomSampler
 from distance import ged, gaussian_kernel
@@ -16,8 +17,11 @@ FLAGS = tf.app.flags.FLAGS
 exec_turnoff_print()
 
 
-class ModelData(object):
-    def __init__(self):
+class ModelData(Data):
+    def __init__(sslf):
+        super().__init__('{}_siamese'.format(FLAGS.dataset))
+
+    def init(self):
         orig_train_data = load_data(FLAGS.dataset, train=True)
         self.node_feat_encoder = self.__get_node_feature_encoder( \
             orig_train_data.graphs)
@@ -35,16 +39,16 @@ class ModelData(object):
     def input_dim(self):
         return self.node_feat_encoder.input_dim()
 
-    def get_feed_dict(self, placeholders, train_val_test):
+    def get_feed_dict(self, placeholders, dist_calculator, train_val_test):
         g1, g2 = self.__get_graph_pair(train_val_test)
         feed_dict = dict()
         feed_dict[placeholders['labels']] = \
-            self.__get_sim(g1.get_nxgraph(), g2.get_nxgraph())
+            self.__get_sim(g1.get_nxgraph(), g2.get_nxgraph(), dist_calculator)
         feed_dict[placeholders['features_1']] = g1.get_node_features()
         feed_dict[placeholders['features_2']] = g2.get_node_features()
         num_support = 1
         # for i in range(num_support):
-        feed_dict[placeholders['support_1']] = g1.get_supports()
+        feed_dict[placeholders['support_1']] = g1.get_supports()  # TODO: turn into batching
         feed_dict[placeholders['support_2']] = g2.get_supports()
         feed_dict[placeholders['num_supports']] = len(g1.get_supports())
         assert (len(g1.get_supports()) == len(g2.get_supports()))
@@ -94,12 +98,9 @@ class ModelData(object):
         graph_collection = self.__get_graph_collection(train_val_test)
         return graph_collection.get_graph_pair()
 
-    def __get_sim(self, g1, g2):
-        if FLAGS.dist_metric == 'ged':
-            return gaussian_kernel(ged(g1, g2, 'beam80'), FLAGS.yeta)
-        else:
-            raise RuntimeError('Unknwon distance metric {}'.format( \
-                FLAGS.dist_metric))
+    def __get_sim(self, g1, g2, dist_calculator):
+        return gaussian_kernel( \
+            dist_calculator.calculate_dist(g1, g2), FLAGS.yeta)
 
 
 class NodeFeatureOneHotEncoder(object):
