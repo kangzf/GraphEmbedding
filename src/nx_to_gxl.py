@@ -2,7 +2,6 @@
 Credit: Yang Qiao (angelinana0408@gmail.com)
 '''
 
-import os
 from bs4 import BeautifulSoup as Soup
 from collections import OrderedDict
 

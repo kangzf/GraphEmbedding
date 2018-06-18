@@ -2,9 +2,10 @@ from utils import get_root_path, exec, get_ts
 from nx_to_gxl import nx_to_gxl
 from os.path import isfile
 from os import getpid
-from time import time
 import fileinput
 import networkx as nx
+import numpy as np
+
 
 def mcs(g1, g2):
     nx.write_gexf(g1, 'temp_1.gexf')
@@ -15,7 +16,7 @@ def mcs(g1, g2):
     # By default networkx==1.10 is assumed.
     cmd = 'source activate graphembedding && python mcs_cal.py'
     exec('/bin/bash -c "{}"'.format(cmd))
-    f = open('mcs_result.txt','r')
+    f = open('mcs_result.txt', 'r')
     return int(f.read())
 
 
@@ -47,7 +48,13 @@ def ged(g1, g2, algo, debug=False, timeit=False):
     if timeit:
         rtn.append(t)
     clean_up(t_datapath, prop_file, result_file)
+    if len(rtn) == 1:
+        return rtn[0]
     return tuple(rtn)
+
+
+def gaussian_kernel(x, yeta):
+    return np.exp(-yeta * np.square(x))
 
 
 def setup_temp_data_folder(gp, append_str):
@@ -70,7 +77,7 @@ def setup_property_file(src, gp, meta, append_str):
         gp, append_str)
     srcfile = '{}/{}.prop'.format(src, meta)
     if not isfile(srcfile):
-        if 'beam' in meta: # for beam
+        if 'beam' in meta:  # for beam
             metasp = meta.split('_')
             s = int(metasp[0][4:])
             if s <= 0:
@@ -82,7 +89,7 @@ def setup_property_file(src, gp, meta, append_str):
     exec('cp {} {}'.format(srcfile, destfile))
     for line in fileinput.input(destfile, inplace=True):
         line = line.rstrip()
-        if line == 's=': # for beam
+        if line == 's=':  # for beam
             print('s={}'.format(s))
         else:
             print(line.replace('temp', 'temp_{}'.format(append_str)))
@@ -94,7 +101,7 @@ def get_result(gp, algo, append_str):
     with open(result_file) as f:
         lines = f.readlines()
         ln = 16 if 'beam' in algo else 15
-        t = int(lines[ln].split(': ')[1]) # msec
+        t = int(lines[ln].split(': ')[1])  # msec
         ln = 23 if 'beam' in algo else 22
         d = float(lines[ln]) * 2  # alpha=0.5 --> / 2
         assert (d - int(d) == 0)
@@ -122,6 +129,7 @@ def get_append_str(g1, g2):
 def clean_up(t_datapath, prop_file, result_file):
     for path in [t_datapath, prop_file, result_file]:
         exec('rm -rf {}'.format(path))
+
 
 if __name__ == '__main__':
     from utils import load_data

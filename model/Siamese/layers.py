@@ -24,7 +24,7 @@ def sparse_dropout(x, keep_prob, noise_shape):
     random_tensor += tf.random_uniform(noise_shape)
     dropout_mask = tf.cast(tf.floor(random_tensor), dtype=tf.bool)
     pre_out = tf.sparse_retain(x, dropout_mask)
-    return pre_out * (1./keep_prob)
+    return pre_out * (1. / keep_prob)
 
 
 def dot(x, y, sparse=False):
@@ -84,6 +84,7 @@ class Layer(object):
 
 class Dense(Layer):
     """Dense layer."""
+
     def __init__(self, input_dim, output_dim, placeholders, dropout=0., sparse_inputs=False,
                  act=tf.nn.relu, bias=False, featureless=False, **kwargs):
         super(Dense, self).__init__(**kwargs)
@@ -115,9 +116,9 @@ class Dense(Layer):
 
         # dropout
         if self.sparse_inputs:
-            x = sparse_dropout(x, 1-self.dropout, self.num_features_nonzero)
+            x = sparse_dropout(x, 1 - self.dropout, self.num_features_nonzero)
         else:
-            x = tf.nn.dropout(x, 1-self.dropout)
+            x = tf.nn.dropout(x, 1 - self.dropout)
 
         # transform
         output = dot(x, self.vars['weights'], sparse=self.sparse_inputs)
@@ -131,6 +132,7 @@ class Dense(Layer):
 
 class GraphConvolution(Layer):
     """Graph convolution layer."""
+
     def __init__(self, input_dim, output_dim, placeholders, dropout=0.,
                  sparse_inputs=True, act=tf.nn.relu, bias=False,
                  featureless=False, num_supports=1, **kwargs):
@@ -160,60 +162,51 @@ class GraphConvolution(Layer):
 
     def _call(self, inputs):
         x = inputs[0]
-        self.support = inputs[1]
+        self.support = [inputs[1]] # TODO:fix
         num_features_nonzero = inputs[2]
 
         # dropout
         if self.sparse_inputs:
-            x = sparse_dropout(x, 1-self.dropout, num_features_nonzero)
+            x = sparse_dropout(x, 1 - self.dropout, num_features_nonzero)
         else:
-            x = tf.nn.dropout(x, 1-self.dropout)
+            x = tf.nn.dropout(x, 1 - self.dropout)
 
         # convolve
         # one pair comparison
-        if not FLAGS.mini_batch:
-            supports = list()
-            for i in range(len(self.support)):
-                if not self.featureless:
-                    pre_sup = dot(x, self.vars['weights_' + str(i)],
-                                  sparse=self.sparse_inputs)
-                else:
-                    pre_sup = self.vars['weights_' + str(i)]
-                support = dot(self.support[i], pre_sup, sparse=True)
-                supports.append(support)
-            output = tf.add_n(supports)
-
-        # mini-batch
-        else:
-            supports = list()
-            for i in range(len(self.support)):
-                if not self.featureless:
-                    support = tf.einsum('aij,jk->aik',tf.matmul(support,x),self.vars['weights_' + str(i)])
-                else:
-                    support = tf.einsum('aij,jk->aik',support,self.vars['weights_' + str(i)]) # if featureless, should init W as N*D
-                supports.append(support)
-            output = tf.add_n(supports)
+        supports = list()
+        for i in range(len(self.support)):
+            if not self.featureless:
+                pre_sup = dot(x, self.vars['weights_' + str(i)],
+                              sparse=self.sparse_inputs)
+            else:
+                pre_sup = self.vars['weights_' + str(i)]
+            support = dot(self.support[i], pre_sup, sparse=True)
+            supports.append(support)
+        output = tf.add_n(supports)
 
         # bias
         if self.bias:
-            output += self.vars['bias']            
+            output += self.vars['bias']
 
         return self.act(output)
 
 
 class Average(Layer):
     """Dense layer."""
+
     def __init__(self, placeholders, **kwargs):
         super(Average, self).__init__(**kwargs)
 
     def _call(self, inputs):
         x = inputs
-        output = tf.reduce_mean(x, 0) # x is N*D
+        output = tf.reduce_mean(x, 0)  # x is N*D
 
         return output
 
+
 class NTN(Layer):
     """Dense layer."""
+
     def __init__(self, input_dim, feature_map_dim, placeholders, dropout=0.,
                  sparse_inputs=False, act=tf.nn.relu, bias=True, **kwargs):
         super(NTN, self).__init__(**kwargs)
@@ -231,11 +224,11 @@ class NTN(Layer):
 
         with tf.variable_scope(self.name + '_vars'):
             self.vars['weights_W'] = glorot([input_dim, input_dim, feature_map_dim],
-                                                    name='weights_W')
-            self.vars['weights_V'] = glorot([feature_map_dim, input_dim*2],
-                                                    name='weights_V')
+                                            name='weights_W')
+            self.vars['weights_V'] = glorot([feature_map_dim, input_dim * 2],
+                                            name='weights_V')
             self.vars['weights_U'] = glorot([feature_map_dim, 1],
-                                                    name='weights_U')
+                                            name='weights_U')
             if self.bias:
                 self.vars['bias'] = zeros([feature_map_dim], name='bias')
 
@@ -250,50 +243,32 @@ class NTN(Layer):
 
         # dropout
         if self.sparse_inputs:
-            x_1 = sparse_dropout(x_1, 1-self.dropout, self.num_features_nonzero)
-            x_2 = sparse_dropout(x_2, 1-self.dropout, self.num_features_nonzero)
+            x_1 = sparse_dropout(x_1, 1 - self.dropout, self.num_features_nonzero)
+            x_2 = sparse_dropout(x_2, 1 - self.dropout, self.num_features_nonzero)
         else:
-            x_1 = tf.nn.dropout(x_1, 1-self.dropout)
-            x_2 = tf.nn.dropout(x_2, 1-self.dropout)
+            x_1 = tf.nn.dropout(x_1, 1 - self.dropout)
+            x_2 = tf.nn.dropout(x_2, 1 - self.dropout)
 
         # one pair comparison
-        if not FLAGS.mini_batch:
 
-            x_1 = tf.reshape(x_1, [1,-1])
-            x_2 = tf.reshape(x_2, [1,-1])
+        x_1 = tf.reshape(x_1, [1, -1])
+        x_2 = tf.reshape(x_2, [1, -1])
 
-            feature_map = []
-            for i in range(self.feature_map_dim):
-                V_out = tf.matmul(tf.reshape(self.vars['weights_V'][i],[1,-1]),tf.concat([tf.transpose(x_1),tf.transpose(x_2)],0))
-                temp = tf.matmul(x_1,self.vars['weights_W'][:,:,i])
-                h = tf.reduce_sum(temp*x_2) # h = K.sum(temp*e2,axis=1)
-                if self.bias:
-                    middle = V_out+h+self.vars['bias'][i]
-                else:
-                    middle = V_out+h
-                feature_map.append(middle)
-
-            tensor_bi_product = tf.stack(feature_map) # axis=0
-            tensor_bi_product = self.act(tensor_bi_product)
-
-            output = tf.reduce_sum(self.vars['weights_U']*tensor_bi_product)
-
-        # mini-batch
-        else:
-            temp = tf.einsum('ij,ajk->iak',x_1,self.vars['weights_W'])
-            h = tf.squeeze(tf.matmul(temp,tf.expand_dims(x_2, 2)))
-            V_out = tf.matmul(tf.concat([x_1,x_2],1),tf.transpose(self.vars['weights_V']))
-
+        feature_map = []
+        for i in range(self.feature_map_dim):
+            V_out = tf.matmul(tf.reshape(self.vars['weights_V'][i], [1, -1]),
+                              tf.concat([tf.transpose(x_1), tf.transpose(x_2)], 0))
+            temp = tf.matmul(x_1, self.vars['weights_W'][:, :, i])
+            h = tf.reduce_sum(temp * x_2)  # h = K.sum(temp*e2,axis=1)
             if self.bias:
-                tensor_bi_product = V_out+h+self.vars['bias']
+                middle = V_out + h + self.vars['bias'][i]
             else:
-                tensor_bi_product = V_out+h
+                middle = V_out + h
+            feature_map.append(middle)
 
-            tensor_bi_product = self.act(tensor_bi_product)
+        tensor_bi_product = tf.stack(feature_map)  # axis=0
+        tensor_bi_product = self.act(tensor_bi_product)
 
-            output = tf.matmul(tensor_bi_product,self.vars['weights_U']) # B*1 labels should be same dim as well
-     
-        # tensor_bi_product = self.U*self.activation(K.reshape(
-        #                     tensor_bi_product,(self.k,batch_size))).T
+        output = tf.reduce_sum(self.vars['weights_U'] * tensor_bi_product)
 
         return output

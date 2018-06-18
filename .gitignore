@@ -126,3 +126,4 @@ metapath2vec/
 result/
 sftp-config.json
 src/pv/
+*.gml

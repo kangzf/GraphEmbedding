@@ -3,7 +3,7 @@ from utils import get_result_path, load_data, get_ts, \
     exec_turnoff_print, get_computer_name, check_nx_version, prompt_get_cpu
 from metrics import Metric, precision_at_ks, mean_reciprocal_rank
 from distance import ged
-from result import load_results_as_dict, load_result
+from results import load_results_as_dict, load_result
 import networkx as nx
 
 check_nx_version()
