@@ -1,5 +1,5 @@
-from utils import get_train_str, get_data_path, get_save_path, sorted_nicely
-import pickle
+from utils import get_train_str, get_data_path, get_save_path, sorted_nicely, \
+    save, load
 import networkx as nx
 from random import randint
 from glob import glob
@@ -10,30 +10,20 @@ class Data(object):
         name = self.__class__.__name__ + '_' + name_str + self.name_suffix()
         self.name = name
         sfn = self.save_filename()
-        try:
-            self.load()
+        temp = load(sfn)
+        if temp:
+            self.__dict__ = temp
             print('%s loaded from %s' % (name, sfn))
-        except Exception:
+        else:
             self.init()
-            self.save()
+            save(sfn, self.__dict__)
             print('%s saved to %s' % (name, sfn))
 
     def name_suffix(self):
         return ''
 
-    def save(self):
-        file = open(self.save_filename(), 'wb')
-        file.write(pickle.dumps(self.__dict__))
-        file.close()
-
-    def load(self):
-        file = open(self.save_filename(), 'rb')
-        dp = file.read()
-        file.close()
-        self.__dict__ = pickle.loads(dp)
-
     def save_filename(self):
-        return '{}/{}.pkl'.format(get_save_path(), self.name)
+        return '{}/{}'.format(get_save_path(), self.name)
 
     def get_gids(self):
         return [g.graph['gid'] for g in self.graphs]
@@ -66,6 +56,7 @@ class SynData(Data):
 
 class AIDSData(Data):
     def __init__(self, train):
+        self.train = train
         super().__init__(get_train_str(train))
 
     def init(self):

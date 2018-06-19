@@ -53,4 +53,4 @@ WORKDIR /workspace
 # docker build .
 # docker tag 89c8df0682d5 yba_graphembedding
 # nvidia-docker run -v /home/yba/GraphEmbedding:/workspace -it yba_graphembedding bash
-# nvidia-docker run -v /home/yba/GraphEmbedding:/workspace --env CUDA_VISIBLE_DEVICES=<> yba_graphembedding python model/SIAMESE_GCN/train.py
+# nvidia-docker run -v /home/yba/GraphEmbedding:/workspace --env CUDA_VISIBLE_DEVICES=<> yba_graphembedding python model/Siamese/train.py
