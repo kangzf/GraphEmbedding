@@ -64,15 +64,28 @@ def mean_reciprocal_rank(true_r, pred_r, norm, print_ids=[]):
     return 1.0 / hmean(topanswer_ranks)
 
 
-def mean_squared_error(true_r, pred_r, norm):
+def mean_squared_error(true_r, pred_r, sim_kernel, yeta, norm):
     """
     Regression-based. L2 difference between the ground-truth similarities
         and the predicted similarities.
     :param true_r:
     :param pred_r:
+    :param sim_kernel:
+    :param yeta:
     :param norm:
-    :param print_id:
     :return:
     """
-    # return np.linalg.norm()
-    return 0.0
+    return np.linalg.norm( \
+        true_r.sim_mat(sim_kernel, yeta, norm) - \
+        pred_r.sim_mat(sim_kernel, yeta, norm))
+
+if __name__ == '__main__':
+    x = np.array([[14, 40, 33, 14, 28]])
+    y = np.array([[11, 37, 36, 9, 30]])
+    from distance import gaussian_kernel
+    sim_x = gaussian_kernel(x, 1.0)
+    sim_y = gaussian_kernel(y, 1.0)
+    print('sim_x', sim_x)
+    print('sim_y', sim_y)
+    r = np.linalg.norm(sim_x - sim_y)
+    print(r)

@@ -73,6 +73,10 @@ class GCNTN(Model):
         self.input_dim = input_dim
         # self.input_dim = self.inputs.get_shape().as_list()[1]  # To be supported in future Tensorflow versions
         self.output_dim = output_dim  # placeholders['labels'].get_shape().as_list()[1]
+        if FLAGS.sim_kernel == 'gaussian':
+            self.kernel_func = self.gaussian_kernel
+        else:
+            raise RuntimeError('Unknown sim kernel {}'.format(FLAGS.sim_kernel))
         self.yeta = yeta
         self.placeholders = placeholders
 
@@ -115,6 +119,11 @@ class GCNTN(Model):
         for var in self.layers[0].vars.values():
             self.loss += FLAGS.weight_decay * tf.nn.l2_loss(var)
         # L2 loss.
-        self.loss += tf.nn.l2_loss(self.placeholders['labels'] - self.outputs)
+        self.loss += tf.nn.l2_loss(self.placeholders['labels'] - self.pred_sim())
 
+    def gaussian_kernel(self, x):
+        return tf.exp(-self.yeta * tf.square(x))
+
+    def pred_sim(self):
+        return self.kernel_func(self.outputs)
     # def name(self):

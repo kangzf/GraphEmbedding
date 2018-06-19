@@ -2,8 +2,10 @@ import random
 
 
 class Sampler(object):
-    def __init__(self, gs):
+    def __init__(self, gs, sample_num, sampler_duplicate_removal):
         self.gs = gs
+        self.sample_num = sample_num
+        self.sampler_duplicate_removal = sampler_duplicate_removal
         assert (len(gs) >= 2)
 
     def get_pair(self):
@@ -11,8 +13,8 @@ class Sampler(object):
 
 
 class RandomSampler(Sampler):
-    def __init__(self, gs):
-        super().__init__(gs)
+    def __init__(self, gs, sample_num, sampler_duplicate_removal):
+        super().__init__(gs, sample_num, sampler_duplicate_removal)
         self.idx = 0
 
     def get_pair(self):

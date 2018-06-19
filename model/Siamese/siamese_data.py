@@ -5,7 +5,7 @@ sys.path.insert(0, "{}/../src".format(dirname(dirname(abspath(__file__)))))
 from data import Data
 from utils import load_data, exec_turnoff_print
 from samplers import RandomSampler
-from distance import ged, gaussian_kernel
+from distance import gaussian_kernel
 from sklearn.preprocessing import OneHotEncoder
 import scipy.sparse as sp
 import numpy as np
@@ -17,12 +17,21 @@ FLAGS = tf.app.flags.FLAGS
 exec_turnoff_print()
 
 
-class ModelData(Data):
-    def __init__(sslf):
-        super().__init__('{}_siamese'.format(FLAGS.dataset))
+class SiameseModelData(Data):
+    def __init__(self):
+        super().__init__('{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format( \
+            FLAGS.dataset, FLAGS.valid_percentage, FLAGS.node_feat_name, \
+            FLAGS.node_feat_encoder, FLAGS.edge_feat_name, \
+            FLAGS.edge_feat_processor, FLAGS.dist_metric, FLAGS.dist_algo, \
+            FLAGS.sampler, FLAGS.sample_num, FLAGS.sampler_duplicate_removal))
+        print('{} train graphs; {} validation graphs; {} test graphs'.format( \
+            self.train_data.num_graphs(), \
+            self.valid_data.num_graphs(), \
+            self.test_data.num_graphs()))
 
     def init(self):
         orig_train_data = load_data(FLAGS.dataset, train=True)
+        self.n = len(orig_train_data.graphs)
         self.node_feat_encoder = self.__get_node_feature_encoder( \
             orig_train_data.graphs)
         train_gs, valid_gs = self.__train_val_split(orig_train_data)
@@ -31,19 +40,25 @@ class ModelData(Data):
         self.train_data = ModelGraphList(train_gs, self.node_feat_encoder)
         self.valid_data = ModelGraphList(valid_gs, self.node_feat_encoder)
         self.test_data = ModelGraphList(test_gs, self.node_feat_encoder)
-        print('{} train graphs; {} validation graphs; {} test graphs'.format( \
-            self.train_data.num_graphs(), \
-            self.valid_data.num_graphs(), \
-            self.test_data.num_graphs()))
+        self.m = self.test_data.num_graphs()
+
+        assert (len(train_gs) + len(valid_gs) == len(orig_train_data.graphs))
 
     def input_dim(self):
         return self.node_feat_encoder.input_dim()
 
-    def get_feed_dict(self, placeholders, dist_calculator, train_val_test):
-        g1, g2 = self.__get_graph_pair(train_val_test)
+    def get_feed_dict(self, placeholders, dist_calculator, train_val_test, \
+                      test_id, train_id):
         feed_dict = dict()
-        feed_dict[placeholders['labels']] = \
-            self.__get_sim(g1.get_nxgraph(), g2.get_nxgraph(), dist_calculator)
+        # no pair is specified == train or val
+        if test_id is None or train_id is None:
+            assert (test_id is None and train_id is None)
+            g1, g2 = self.__get_graph_pair(train_val_test)
+            feed_dict[placeholders['labels']] = \
+                self.__get_sim(g1.get_nxgraph(), g2.get_nxgraph(), dist_calculator)
+        else:
+            g1 = self.test_data.get_graph(test_id)
+            g2 = self.__get_orig_train_graph(train_id)
         feed_dict[placeholders['features_1']] = g1.get_node_features()
         feed_dict[placeholders['features_2']] = g2.get_node_features()
         num_support = 1
@@ -58,6 +73,9 @@ class ModelData(Data):
             g2.get_node_features()[1].shape
         feed_dict.update({placeholders['dropout']: FLAGS.dropout})
         return feed_dict
+
+    def m_n(self):
+        return self.m, self.n
 
     def __train_val_split(self, orig_train_data):
         if FLAGS.valid_percentage < 0 or FLAGS.valid_percentage > 1:
@@ -102,6 +120,16 @@ class ModelData(Data):
         return gaussian_kernel( \
             dist_calculator.calculate_dist(g1, g2), FLAGS.yeta)
 
+    def __get_orig_train_graph(self, orig_train_id):
+        trainlen = self.train_data.num_graphs()
+        vallen = self.valid_data.num_graphs()
+        if 0 <= orig_train_id < trainlen:
+            return self.train_data.get_graph(orig_train_id)
+        elif orig_train_id < trainlen + vallen:
+            return self.valid_data.get_graph(orig_train_id - trainlen)
+        else:
+            assert (False)
+
 
 class NodeFeatureOneHotEncoder(object):
     def __init__(self, gs):
@@ -128,7 +156,8 @@ class ModelGraphList(object):
     def __init__(self, gs, node_feat_encoder):
         self.gs = [ModelGraph(g, node_feat_encoder) for g in gs]
         if FLAGS.sampler == 'random':
-            self.sampler = RandomSampler(self.gs)
+            self.sampler = RandomSampler( \
+                self.gs, FLAGS.sample_num, FLAGS.sampler_duplicate_removal)
         else:
             raise RuntimeError('Unknown sampler {}'.format(FLAGS.sampler))
 
@@ -137,6 +166,12 @@ class ModelGraphList(object):
 
     def get_graph_pair(self):
         return self.sampler.get_pair()
+
+    def get_graph(self, id):
+        return self.gs[id]
+
+    def num_graphs(self):
+        return len(self.gs)
 
 
 class ModelGraph(object):

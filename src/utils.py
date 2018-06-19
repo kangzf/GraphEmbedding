@@ -58,6 +58,12 @@ def get_result_path():
     return get_root_path() + '/result'
 
 
+def create_dir_if_not_exists(dir):
+    import os
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+
+
 def draw_graph(g, file):
     import matplotlib
     matplotlib.use("Agg")

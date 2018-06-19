@@ -1,5 +1,6 @@
 from utils import get_result_path, get_save_path, get_model_path, \
     get_file_base_id, load_data, load_pkl, save_pkl
+from distance import gaussian_kernel
 from glob import glob
 import numpy as np
 import json
@@ -41,6 +42,9 @@ class Result(object):
         :param norm:
         :return: (metric, dist or sim between qid and gid)
         """
+        raise NotImplementedError()
+
+    def sim_mat(self, sim_kernel, yeta, norm):
         raise NotImplementedError()
 
     def top_k_ids(self, qid, k, norm, inclusive):
@@ -148,6 +152,12 @@ class DistanceModelResult(Result):
     def dist_sim(self, qid, gid, norm):
         return self.dist_metric(), self._select_dist_mat(norm)[qid][gid]
 
+    def sim_mat(self, sim_kernel, yeta, norm):
+        if sim_kernel == 'gaussian':
+            return gaussian_kernel(self.dist_mat(norm), yeta)
+        else:
+            raise RuntimeError('Unknown sim kernel {}'.format(sim_kernel))
+
     def time(self, qid, gid):
         return self.time_mat_[qid][gid]
 
@@ -190,16 +200,16 @@ class PairwiseMCSModelResult(DistanceModelResult):
 
 
 class SimilarityBasedModelResult(Result):
-    def sim_mat(self):
+    def sim_mat(self, sim_kernel=None, yeta=None, norm=None):
         return self.sim_mat_
 
-    def dist_sim_mat(self, *unused):
-        raise self.sim_mat()
+    def dist_sim_mat(self, norm=False):
+        return self.sim_mat()
 
-    def dist_sim(self, qid, gid, *unused):
+    def dist_sim(self, qid, gid, norm=False):
         return 'sim', self.sim_mat_[qid][gid]
 
-    def sort_id_mat(self, *unused):
+    def sort_id_mat(self, norm=False):
         # Reverse the sorting since similarity-based.
         # More similar items come first.
         return np.argsort(self.sim_mat_, kind='mergesort')[:, ::-1]
@@ -291,18 +301,58 @@ class Graph2VecResult(SimilarityBasedModelResult):
         return rtn
 
 
-def load_results_as_dict(dataset, models):
+class SiameseModelResult(SimilarityBasedModelResult):
+    def __init__(self, dataset, model, \
+                 sim_mat=None, time_mat=None, model_info=None):
+        self.model_ = model
+        self.dataset = dataset
+        if sim_mat is not None:
+            self.sim_mat_ = sim_mat
+        else:
+            self.sim_mat_ = self._load_sim_mat(model_info)
+        if time_mat is not None:
+            self.time_mat_ = time_mat
+        else:
+            self.time_mat_ = self._load_time_mat(model_info)
+        self.sort_id_mat_ = self.sort_id_mat()
+
+    def time(self, qid, gid):
+        return None
+
+    def mat(self, metric, *unused):
+        if metric == 'sim':
+            return self.sim_mat_
+        elif metric == 'time':
+            return self.time_mat_
+        else:
+            raise RuntimeError('Unknown metric {} for model {}'.format( \
+                metric, self.model_))
+
+    def _load_sim_mat(self, model_info):
+        raise NotImplementedError()
+
+    def _load_time_mat(self, model_info):
+        raise NotImplementedError()
+
+
+def load_results_as_dict(dataset, models, sim='dot', \
+                         sim_mat=None, time_mat=None, model_info=None):
     rtn = {}
     for model in models:
-        rtn[model] = load_result(dataset, model)
+        rtn[model] = load_result(dataset, model, sim, \
+                                 sim_mat, time_mat, model_info)
     return rtn
 
 
-def load_result(dataset, model, sim='dot'):
+def load_result(dataset, model, sim, sim_mat, time_mat, model_info):
     if 'beam' in model or model in ['astar', 'hungarian', 'vj']:
         return PairwiseGEDModelResult(dataset, model)
     elif model == 'graph2vec':
         return Graph2VecResult(dataset, model, sim)
+    elif 'siamese' in model:
+        return SiameseModelResult(dataset, model, sim_mat, time_mat, model_info)
+    else:
+        raise RuntimeError('Unknown model {}'.format(model))
 
 
 if __name__ == '__main__':

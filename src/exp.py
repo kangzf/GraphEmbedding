@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-from utils import get_result_path, load_data, get_ts, exec_turnoff_print, \
-    prompt, prompt_get_computer_name, check_nx_version, prompt_get_cpu
-from metrics import Metric, precision_at_ks, mean_reciprocal_rank
+from utils import get_result_path, create_dir_if_not_exists, load_data, \
+    get_ts, exec_turnoff_print, prompt, prompt_get_computer_name, \
+    check_nx_version, prompt_get_cpu
+from metrics import Metric, precision_at_ks, mean_reciprocal_rank, \
+    mean_squared_error
 from distance import ged
 from results import load_results_as_dict, load_result
 import networkx as nx
@@ -11,12 +13,15 @@ import multiprocessing as mp
 from time import time
 from random import randint, uniform
 
-if prompt_get_computer_name() == 'yba':  # local
-    from pandas import read_csv
-    import matplotlib.pyplot as plt
-    import matplotlib
-    from vis import vis
+from pandas import read_csv
+import matplotlib.pyplot as plt
+import matplotlib
+from vis import vis
 import numpy as np
+
+BASELINE_MODELS = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
+                   'hungarian', 'vj']
+TRUE_MODEL = 'beam80'
 
 """ Plotting args. """
 args1 = {'astar': {'color': 'grey'},
@@ -26,8 +31,9 @@ args1 = {'astar': {'color': 'grey'},
          'beam40': {'color': 'darkorange'},
          'beam80': {'color': 'cyan'},
          'hungarian': {'color': 'deepskyblue'},
-         'vj': {'color': 'red'},
-         'graph2vec': {'color': 'darkcyan'}}
+         'vj': {'color': 'darkcyan'},
+         'graph2vec': {'color': 'darkcyan'},
+         'siamese_gcntn': {'color': 'red'}}
 args2 = {'astar': {'marker': '*', 'facecolors': 'none', 'edgecolors': 'grey'},
          'beam5': {'marker': '|', 'facecolors': 'deeppink'},
          'beam10': {'marker': '_', 'facecolors': 'b'},
@@ -38,9 +44,13 @@ args2 = {'astar': {'marker': '*', 'facecolors': 'none', 'edgecolors': 'grey'},
          'beam80': {'marker': 's', 'facecolors': 'none', 'edgecolors': 'cyan'},
          'hungarian': {'marker': 'X', 'facecolors': 'none',
                        'edgecolors': 'deepskyblue'},
-         'vj': {'marker': 'P', 'facecolors': 'none', 'edgecolors': 'red'},
+         'vj': {'marker': 'h', 'facecolors': 'none',
+                'edgecolors': 'darkcyan'},
          'graph2vec': {'marker': 'h', 'facecolors': 'none',
-                       'edgecolors': 'darkcyan'}}
+                       'edgecolors': 'darkcyan'},
+         'siamese_gcntn': {'marker': 'P', \
+                           'facecolors': 'none', 'edgecolors': 'red'}
+         }
 
 
 def exp1():
@@ -254,8 +264,7 @@ def print_progress(i, j, m, n, label):
 def exp5():
     """ Plot ged and time. """
     dataset = 'aids50'
-    models = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
-              'hungarian', 'vj']
+    models = BASELINE_MODELS
     rs = load_results_as_dict(dataset, models)
     metrics = [Metric('ged', 'ged'), Metric('time', 'time (msec)')]
     for metric in metrics:
@@ -299,15 +308,19 @@ def get_test_graph_sizes(dataset):
 
 
 def exp6():
-    """ Plot ap@k. """
     dataset = 'aids50'
-    models = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
-              'hungarian', 'vj']
-    true_model = 'beam80'
+    models = BASELINE_MODELS
     metric = 'ap@k'
     norms = [True, False]
     rs = load_results_as_dict(dataset, models)
-    true_result = rs[true_model]
+    true_result = rs[TRUE_MODEL]
+    plot_apk(dataset, models, rs, true_result, metric, norms)
+
+
+def plot_apk(dataset, models, rs, true_result, metric, norms):
+    """ Plot ap@k. """
+    create_dir_if_not_exists('{}/{}/{}'.format( \
+        get_result_path(), dataset, metric))
     for norm in norms:
         ks = []
         k = 1
@@ -361,34 +374,49 @@ def get_norm_str(norm):
 
 
 def exp7():
-    """ Plot mrr. """
     dataset = 'aids50'
-    models = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
-              'hungarian', 'vj']
-    true_model = 'beam80'
-    metric = 'mrr'
+    models = BASELINE_MODELS
+    metric = 'mse'
+    sim_kernel = 'gaussian'
+    yeta = 1.0
     norms = [True, False]
     rs = load_results_as_dict(dataset, models)
-    true_result = rs[true_model]
+    true_result = rs[TRUE_MODEL]
+    plot_mrr_mse(dataset, models, rs, true_result, metric, norms, \
+                 sim_kernel, yeta)
+
+
+def plot_mrr_mse(dataset, models, rs, true_result, metric, norms, \
+                 sim_kernel, yeta):
+    """ Plot mrr or mse. """
+    create_dir_if_not_exists('{}/{}/{}'.format( \
+        get_result_path(), dataset, metric))
     for norm in norms:
-        plot_mrr_helper(dataset, models, rs, true_result, metric, norm)
+        plot_mrr_mse_helper(dataset, models, rs, true_result, metric, norm, \
+                            sim_kernel, yeta)
 
 
-def plot_mrr_helper(dataset, models, rs, true_result, metric, norm):
+def plot_mrr_mse_helper(dataset, models, rs, true_result, metric, norm, \
+                        sim_kernel, yeta):
     print_ids = []
     font = {'family': 'serif',
             'size': 22}
     matplotlib.rc('font', **font)
     plt.figure(figsize=(16, 10))
-    mrrs = []
+    mrr_mse_list = []
     for model in models:
         print(model)
-        mrr = mean_reciprocal_rank(true_result, rs[model], norm, print_ids)
-        print('mrr {}: {}'.format(model, mrr))
-        mrrs.append(mrr)
-    ind = np.arange(len(mrrs))  # the x locations for the groups
+        if metric == 'mrr':
+            mrr_mse = mean_reciprocal_rank(true_result, rs[model], norm, print_ids)
+        elif metric == 'mse':
+            mrr_mse = mean_squared_error(true_result, rs[model], sim_kernel, yeta, norm)
+        else:
+            raise RuntimeError('Unknown {}'.format(metric))
+        print('{} {}: {}'.format(metric, model, mrr_mse))
+        mrr_mse_list.append(mrr_mse)
+    ind = np.arange(len(mrr_mse_list))  # the x locations for the groups
     width = 0.35  # the width of the bars
-    bars = plt.bar(ind, mrrs, width)
+    bars = plt.bar(ind, mrr_mse_list, width)
     for i, bar in enumerate(bars):
         bar.set_color(args1[models[i]]['color'])
     autolabel(bars)
@@ -409,7 +437,7 @@ def autolabel(rects):
     for rect in rects:
         height = rect.get_height()
         plt.text( \
-            rect.get_x() + rect.get_width()/2., 1.005*height, \
+            rect.get_x() + rect.get_width() / 2., 1.005 * height, \
             '{:.2f}'.format(height), ha='center', va='bottom')
 
 
@@ -417,7 +445,6 @@ def exp8():
     """ Query visualization. """
     dataset = 'aids10k'
     model = 'graph2vec'
-    true_model = 'beam80'
     norms = [True, False]
     k = 5
     info_dict = {
@@ -447,7 +474,7 @@ def exp8():
         'plot_save_path': ''
     }
     r = load_result(dataset, model)
-    tr = load_result(dataset, true_model)
+    tr = load_result(dataset, TRUE_MODEL)
     for norm in norms:
         ids = r.sort_id_mat(norm)
         m, n = r.m_n()
@@ -509,4 +536,5 @@ def get_graph_stats_text(g):
         g.number_of_nodes(), g.number_of_edges(), nx.density(g))
 
 
-exp4()
+if __name__ == '__main__':
+    exp7()
