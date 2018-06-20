@@ -75,9 +75,11 @@ def mean_squared_error(true_r, pred_r, sim_kernel, yeta, norm):
     :param norm:
     :return:
     """
+    m, n = true_r.m_n()
+    assert (true_r.m_n() == pred_r.m_n())
     return np.linalg.norm( \
         true_r.sim_mat(sim_kernel, yeta, norm) - \
-        pred_r.sim_mat(sim_kernel, yeta, norm))
+        pred_r.sim_mat(sim_kernel, yeta, norm)) / (m * n)
 
 if __name__ == '__main__':
     x = np.array([[14, 40, 33, 14, 28]])
@@ -88,4 +90,6 @@ if __name__ == '__main__':
     print('sim_x', sim_x)
     print('sim_y', sim_y)
     r = np.linalg.norm(sim_x - sim_y)
+    print(r)
+    r = np.linalg.norm(np.array([[0, 1], [2, -1]]) - np.array([[0, 1], [0, 1]]))
     print(r)

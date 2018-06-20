@@ -1,4 +1,9 @@
 from layers import *
+import sys
+from os.path import dirname, abspath
+
+sys.path.insert(0, "{}/../src".format(dirname(dirname(abspath(__file__)))))
+from similarity import create_sim_kernel
 
 flags = tf.app.flags
 FLAGS = flags.FLAGS
@@ -73,11 +78,7 @@ class GCNTN(Model):
         self.input_dim = input_dim
         # self.input_dim = self.inputs.get_shape().as_list()[1]  # To be supported in future Tensorflow versions
         self.output_dim = output_dim  # placeholders['labels'].get_shape().as_list()[1]
-        if FLAGS.sim_kernel == 'gaussian':
-            self.kernel_func = self.gaussian_kernel
-        else:
-            raise RuntimeError('Unknown sim kernel {}'.format(FLAGS.sim_kernel))
-        self.yeta = yeta
+        self.sim_kernel = create_sim_kernel(FLAGS.sim_kernel, FLAGS.yeta)
         self.placeholders = placeholders
 
         self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)
@@ -119,11 +120,13 @@ class GCNTN(Model):
         for var in self.layers[0].vars.values():
             self.loss += FLAGS.weight_decay * tf.nn.l2_loss(var)
         # L2 loss.
-        self.loss += tf.nn.l2_loss(self.placeholders['labels'] - self.pred_sim())
-
-    def gaussian_kernel(self, x):
-        return tf.exp(-self.yeta * tf.square(x))
+        self.loss += tf.nn.l2_loss( \
+            self.sim_kernel.dist_to_sim_tf(self.placeholders['labels']) - \
+            self.pred_sim())
 
     def pred_sim(self):
-        return self.kernel_func(self.outputs)
+        # return self.outputs
+        # return self.kernel_func(self.outputs)
+        # return 1 / (1 + tf.exp(self.outputs)) + 0.5
+        return tf.sigmoid(self.outputs)
     # def name(self):

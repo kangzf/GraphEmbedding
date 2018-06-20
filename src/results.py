@@ -1,6 +1,6 @@
 from utils import get_result_path, get_save_path, get_model_path, \
     get_file_base_id, load_data, load_pkl, save_pkl
-from distance import gaussian_kernel
+from similarity import create_sim_kernel
 from glob import glob
 import numpy as np
 import json
@@ -153,10 +153,9 @@ class DistanceModelResult(Result):
         return self.dist_metric(), self._select_dist_mat(norm)[qid][gid]
 
     def sim_mat(self, sim_kernel, yeta, norm):
-        if sim_kernel == 'gaussian':
-            return gaussian_kernel(self.dist_mat(norm), yeta)
-        else:
-            raise RuntimeError('Unknown sim kernel {}'.format(sim_kernel))
+        rtn = create_sim_kernel(sim_kernel, yeta). \
+            dist_to_sim(self.dist_mat(norm))
+        return rtn
 
     def time(self, qid, gid):
         return self.time_mat_[qid][gid]

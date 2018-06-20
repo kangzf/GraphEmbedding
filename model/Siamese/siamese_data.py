@@ -5,7 +5,6 @@ sys.path.insert(0, "{}/../src".format(dirname(dirname(abspath(__file__)))))
 from data import Data
 from utils import load_data, exec_turnoff_print
 from samplers import RandomSampler
-from distance import gaussian_kernel
 from sklearn.preprocessing import OneHotEncoder
 import scipy.sparse as sp
 import numpy as np
@@ -55,7 +54,7 @@ class SiameseModelData(Data):
             assert (test_id is None and train_id is None)
             g1, g2 = self.__get_graph_pair(train_val_test)
             feed_dict[placeholders['labels']] = \
-                self.__get_sim(g1.get_nxgraph(), g2.get_nxgraph(), dist_calculator)
+                self.__get_dist(g1.get_nxgraph(), g2.get_nxgraph(), dist_calculator)
         else:
             g1 = self.test_data.get_graph(test_id)
             g2 = self.__get_orig_train_graph(train_id)
@@ -116,9 +115,8 @@ class SiameseModelData(Data):
         graph_collection = self.__get_graph_collection(train_val_test)
         return graph_collection.get_graph_pair()
 
-    def __get_sim(self, g1, g2, dist_calculator):
-        return gaussian_kernel( \
-            dist_calculator.calculate_dist(g1, g2), FLAGS.yeta)
+    def __get_dist(self, g1, g2, dist_calculator):
+        return dist_calculator.calculate_dist(g1, g2)
 
     def __get_orig_train_graph(self, orig_train_id):
         trainlen = self.train_data.num_graphs()

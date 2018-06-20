@@ -53,10 +53,6 @@ def ged(g1, g2, algo, debug=False, timeit=False):
     return tuple(rtn)
 
 
-def gaussian_kernel(x, yeta):
-    return np.exp(-yeta * np.square(x))
-
-
 def setup_temp_data_folder(gp, append_str):
     tp = gp + '/data/temp_{}'.format(append_str)
     exec('rm -rf {} && mkdir {}'.format(tp, tp))

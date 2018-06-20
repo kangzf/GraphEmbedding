@@ -54,7 +54,7 @@ flags.DEFINE_string('model', 'siamese_gcntn', 'Model string.')
 """ sim_kernel: gaussian. """  # TODO: sigmoid
 flags.DEFINE_string('sim_kernel', 'gaussian', \
                     'Name of the similarity kernel.')
-flags.DEFINE_float('yeta', 1.0, 'yeta for the gaussian kernel function.')
+flags.DEFINE_float('yeta', 0.005, 'yeta for the gaussian kernel function.')
 flags.DEFINE_integer('hidden1', 16, 'Number of units in hidden layer 1.')
 flags.DEFINE_integer('feature_map_dim', 10, 'Number of feature maps in NTN.')
 flags.DEFINE_float('dropout', 0.5, 'Dropout rate (1 - keep probability).')
@@ -64,9 +64,9 @@ flags.DEFINE_float('weight_decay', 5e-4, \
 # For training.
 flags.DEFINE_integer('batch_size', 2, 'Number of graph pairs in a batch.')
 flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
-flags.DEFINE_integer('iters', 1000000000, 'Number of iterations to train.')
+flags.DEFINE_integer('iters', 1000, 'Number of iterations to train.')
 """ early_stopping: None for no early stopping. """
-flags.DEFINE_integer('early_stopping', 50, \
+flags.DEFINE_integer('early_stopping', None, \
                      'Tolerance for early stopping (# of iters).')
 
 check_flags(FLAGS)
@@ -156,9 +156,9 @@ test_sim_mat = np.zeros((m, n))
 test_time_mat = np.zeros((m, n))
 for i in range(m):
     for j in range(n):
-        test_time, sim_i_j = run_tf('test', i, j)
-        print('{},{},{:10f}msec,{:.2f}'.format(i, j, test_time * 1000, sim_i_j))
-        assert (0 <= sim_i_j <= 1)
+        sim_i_j, test_time = run_tf('test', i, j)
+        print('{},{},{:2f}mec,{}'.format(i, j, test_time * 1000, sim_i_j))
+        # assert (0 <= sim_i_j <= 1)
         test_sim_mat[i][i] = sim_i_j
         test_time_mat[i][j] = test_time
 print('Evaluating...')
