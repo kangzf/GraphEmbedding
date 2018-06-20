@@ -16,6 +16,13 @@ FLAGS = tf.app.flags.FLAGS
 exec_turnoff_print()
 
 
+def check_flags(FLAGS):
+    assert (FLAGS.sample_num >= -1)
+    assert (FLAGS.yeta >= 0)
+    assert (FLAGS.num_layers >= 2)
+    # TODO: finish.
+
+
 class SiameseModelData(Data):
     def __init__(self):
         super().__init__('{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format( \
@@ -31,11 +38,11 @@ class SiameseModelData(Data):
     def init(self):
         orig_train_data = load_data(FLAGS.dataset, train=True)
         self.n = len(orig_train_data.graphs)
-        self.node_feat_encoder = self.__get_node_feature_encoder( \
+        self.node_feat_encoder = self._get_node_feature_encoder( \
             orig_train_data.graphs)
-        train_gs, valid_gs = self.__train_val_split(orig_train_data)
+        train_gs, valid_gs = self._train_val_split(orig_train_data)
         test_gs = load_data(FLAGS.dataset, train=False).graphs
-        self.__check_graphs_num(test_gs, 'test')
+        self._check_graphs_num(test_gs, 'test')
         self.train_data = ModelGraphList(train_gs, self.node_feat_encoder)
         self.valid_data = ModelGraphList(valid_gs, self.node_feat_encoder)
         self.test_data = ModelGraphList(test_gs, self.node_feat_encoder)
@@ -52,12 +59,13 @@ class SiameseModelData(Data):
         # no pair is specified == train or val
         if test_id is None or train_id is None:
             assert (test_id is None and train_id is None)
-            g1, g2 = self.__get_graph_pair(train_val_test)
+            g1, g2 = self._get_graph_pair(train_val_test)
             feed_dict[placeholders['labels']] = \
-                self.__get_dist(g1.get_nxgraph(), g2.get_nxgraph(), dist_calculator)
+                self._get_dist(g1.get_nxgraph(), g2.get_nxgraph(), dist_calculator)
         else:
             g1 = self.test_data.get_graph(test_id)
-            g2 = self.__get_orig_train_graph(train_id)
+            g2 = self._get_orig_train_graph(train_id)
+            # No need to feed the labels.
         feed_dict[placeholders['features_1']] = g1.get_node_features()
         feed_dict[placeholders['features_2']] = g2.get_node_features()
         num_support = 1
@@ -70,13 +78,13 @@ class SiameseModelData(Data):
             g1.get_node_features()[1].shape  # TODO: refactor
         feed_dict[placeholders['num_features_2_nonzero']] = \
             g2.get_node_features()[1].shape
-        feed_dict.update({placeholders['dropout']: FLAGS.dropout})
+        feed_dict[placeholders['dropout']] = FLAGS.dropout
         return feed_dict
 
     def m_n(self):
         return self.m, self.n
 
-    def __train_val_split(self, orig_train_data):
+    def _train_val_split(self, orig_train_data):
         if FLAGS.valid_percentage < 0 or FLAGS.valid_percentage > 1:
             raise RuntimeError('valid_percentage {} must be in [0, 1]'.format( \
                 FLAGS.valid_percentage))
@@ -84,23 +92,23 @@ class SiameseModelData(Data):
         sp = int(len(gs) * (1 - FLAGS.valid_percentage))
         train_graphs = gs[0:sp]
         valid_graphs = gs[sp:]
-        self.__check_graphs_num(train_graphs, 'train')
-        self.__check_graphs_num(valid_graphs, 'validation')
+        self._check_graphs_num(train_graphs, 'train')
+        self._check_graphs_num(valid_graphs, 'validation')
         return train_graphs, valid_graphs
 
-    def __check_graphs_num(self, graphs, label):
+    def _check_graphs_num(self, graphs, label):
         if len(graphs) <= 2:
             raise RuntimeError('Insufficient {} graphs {}'.format( \
                 label, len(graphs)))
 
-    def __get_node_feature_encoder(self, gs):
+    def _get_node_feature_encoder(self, gs):
         if FLAGS.node_feat_encoder == 'onehot':
             return NodeFeatureOneHotEncoder(gs)
         else:
             raise RuntimeError('Unknown node_feat_encoder {}'.format( \
                 FLAGS.node_feat_encoder))
 
-    def __get_graph_collection(self, train_val_test):
+    def _get_graph_collection(self, train_val_test):
         if train_val_test == 'train':
             return self.train_data
         elif train_val_test == 'val':
@@ -111,14 +119,14 @@ class SiameseModelData(Data):
             raise RuntimeError('Unknown train_val_test {}'.format( \
                 train_val_test))
 
-    def __get_graph_pair(self, train_val_test):
-        graph_collection = self.__get_graph_collection(train_val_test)
+    def _get_graph_pair(self, train_val_test):
+        graph_collection = self._get_graph_collection(train_val_test)
         return graph_collection.get_graph_pair()
 
-    def __get_dist(self, g1, g2, dist_calculator):
+    def _get_dist(self, g1, g2, dist_calculator):
         return dist_calculator.calculate_dist(g1, g2)
 
-    def __get_orig_train_graph(self, orig_train_id):
+    def _get_orig_train_graph(self, orig_train_id):
         trainlen = self.train_data.num_graphs()
         vallen = self.valid_data.num_graphs()
         if 0 <= orig_train_id < trainlen:
@@ -133,20 +141,20 @@ class NodeFeatureOneHotEncoder(object):
     def __init__(self, gs):
         features_set = set()
         for g in gs:
-            features_set = features_set | set(self.__node_feat_dic(g).values())
+            features_set = features_set | set(self._node_feat_dic(g).values())
         self.feat_idx = {feat: idx for idx, feat in enumerate(features_set)}
         self.oe = OneHotEncoder().fit( \
             np.array(list(self.feat_idx.values())).reshape(-1, 1))
 
     def encode(self, g):
-        node_feat_dic = self.__node_feat_dic(g)
+        node_feat_dic = self._node_feat_dic(g)
         temp = [self.feat_idx[node_feat_dic[n]] for n in g.nodes()]
         return self.oe.transform(np.array(temp).reshape(-1, 1)).toarray()
 
     def input_dim(self):
         return self.oe.transform([[0]]).shape[1]
 
-    def __node_feat_dic(self, g):
+    def _node_feat_dic(self, g):
         return nx.get_node_attributes(g, FLAGS.node_feat_name)
 
 
@@ -176,9 +184,9 @@ class ModelGraph(object):
     def __init__(self, nxgraph, node_feat_encoder):
         self.nxgraph = nxgraph
         encoded_features = node_feat_encoder.encode(nxgraph)
-        self.node_features = self.__preprocess_features( \
+        self.node_features = self._preprocess_features( \
             sp.csr_matrix(encoded_features))
-        self.supports = self.__preprocess_adj(nx.adjacency_matrix(nxgraph))
+        self.supports = self._preprocess_adj(nx.adjacency_matrix(nxgraph))
 
     def get_nxgraph(self):
         return self.nxgraph
@@ -189,21 +197,21 @@ class ModelGraph(object):
     def get_supports(self):
         return self.supports
 
-    def __preprocess_features(self, features):
+    def _preprocess_features(self, features):
         """Row-normalize feature matrix and convert to tuple representation"""
         rowsum = np.array(features.sum(1))
         r_inv = np.power(rowsum, -1).flatten()
         r_inv[np.isinf(r_inv)] = 0.
         r_mat_inv = sp.diags(r_inv)
         features = r_mat_inv.dot(features)
-        return self.__sparse_to_tuple(features)
+        return self._sparse_to_tuple(features)
 
-    def __preprocess_adj(self, adj):
+    def _preprocess_adj(self, adj):
         """Preprocessing of adjacency matrix and conversion to tuple representation."""
-        adj_normalized = self.__normalize_adj(adj + sp.eye(adj.shape[0]))
-        return self.__sparse_to_tuple(adj_normalized)
+        adj_normalized = self._normalize_adj(adj + sp.eye(adj.shape[0]))
+        return self._sparse_to_tuple(adj_normalized)
 
-    def __normalize_adj(self, adj):
+    def _normalize_adj(self, adj):
         """Symmetrically normalize adjacency matrix."""
         adj = sp.coo_matrix(adj)
         rowsum = np.array(adj.sum(1))
@@ -212,7 +220,7 @@ class ModelGraph(object):
         d_mat_inv_sqrt = sp.diags(d_inv_sqrt)
         return adj.dot(d_mat_inv_sqrt).transpose().dot(d_mat_inv_sqrt).tocoo()
 
-    def __sparse_to_tuple(self, sparse_mx):
+    def _sparse_to_tuple(self, sparse_mx):
         """Convert sparse matrix to tuple representation."""
 
         def to_tuple(mx):

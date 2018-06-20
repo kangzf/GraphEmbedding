@@ -343,7 +343,8 @@ def load_results_as_dict(dataset, models, sim='dot', \
     return rtn
 
 
-def load_result(dataset, model, sim, sim_mat, time_mat, model_info):
+def load_result(dataset, model, sim=None, sim_mat=None, \
+                time_mat=None, model_info=None):
     if 'beam' in model or model in ['astar', 'hungarian', 'vj']:
         return PairwiseGEDModelResult(dataset, model)
     elif model == 'graph2vec':

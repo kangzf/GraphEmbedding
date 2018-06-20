@@ -1,12 +1,10 @@
-from layers import *
+from layers_factory import create_layers
 import sys
 from os.path import dirname, abspath
 
 sys.path.insert(0, "{}/../src".format(dirname(dirname(abspath(__file__)))))
 from similarity import create_sim_kernel
-
-flags = tf.app.flags
-FLAGS = flags.FLAGS
+import tensorflow as tf
 
 
 class Model(object):
@@ -63,53 +61,56 @@ class Model(object):
 
 
 class GCNTN(Model):
-    def __init__(self, placeholders, input_dim, output_dim, yeta, **kwargs):
+    def __init__(self, FLAGS, placeholders, input_dim, **kwargs):
         super(GCNTN, self).__init__(**kwargs)
-
+        self.FLAGS = FLAGS
+        self.placeholders = placeholders
         self.inputs_1 = placeholders['features_1']
         self.inputs_2 = placeholders['features_2']
         self.support_1 = placeholders['support_1']
         self.support_2 = placeholders['support_2']
+        self.num_supports = placeholders['num_supports']
         self.num_features_1_nonzero = placeholders['num_features_1_nonzero']
         self.num_features_2_nonzero = placeholders['num_features_2_nonzero']
 
-        self.num_supports = placeholders['num_supports']
-
         self.input_dim = input_dim
-        # self.input_dim = self.inputs.get_shape().as_list()[1]  # To be supported in future Tensorflow versions
-        self.output_dim = output_dim  # placeholders['labels'].get_shape().as_list()[1]
-        self.sim_kernel = create_sim_kernel(FLAGS.sim_kernel, FLAGS.yeta)
-        self.placeholders = placeholders
 
+        self.sim_kernel = create_sim_kernel(FLAGS.sim_kernel, FLAGS.yeta)
+        self.loss_func = FLAGS.loss_func
+        self.weight_decay = FLAGS.weight_decay
         self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)
+        print('input_dim', input_dim)
 
         self.build()
 
     def _build(self):
         with tf.variable_scope(self.name):
-            self.layers.append(GraphConvolution(input_dim=self.input_dim,
-                                                output_dim=FLAGS.hidden1,
-                                                placeholders=self.placeholders,
-                                                act=tf.nn.relu,
-                                                dropout=True,
-                                                # num_supports = self.num_supports,
-                                                logging=self.logging))
+            self.layers = create_layers(self, self.FLAGS)
+        print('Created {} layers'.format(len(self.layers)))
 
-            self.layers.append(Average(placeholders=self.placeholders))
-
-            self.layers.append(NTN(input_dim=FLAGS.hidden1,
-                                   feature_map_dim=FLAGS.feature_map_dim,
-                                   placeholders=self.placeholders,
-                                   act=tf.nn.relu,
-                                   dropout=True,
-                                   logging=self.logging))
-
-        # Build sequential layer model
-        hidden_1 = self.layers[0]([self.inputs_1, self.support_1, self.num_features_1_nonzero])
-        hidden_2 = self.layers[0]([self.inputs_2, self.support_2, self.num_features_2_nonzero])
-        self.middle_1 = self.layers[1](hidden_1)
-        self.middle_2 = self.layers[1](hidden_2)
-        self.outputs = self.layers[2]([self.middle_1, self.middle_2])
+        # Build the siamese model.
+        self.activations_list = [[], []]
+        for i, inputs in enumerate([self.inputs_1, self.inputs_2]):
+            activations = self.activations_list[i]
+            activations.append(inputs)
+            assert (len(self.layers) >= 2)
+            for j in range(0, len(self.layers) - 1):
+                layer = self.layers[j]
+                inputs_to_layer = activations[-1]
+                if layer.__class__.__name__ == 'GraphConvolution':
+                    inputs_to_layer = \
+                        [inputs_to_layer,
+                         self._get_support(i),
+                         self._get_num_features_nonzero(i)]
+                print('Graph {} through layer {}:{}'.format(
+                    i + 1, j, layer.get_name()))
+                hidden = layer(inputs_to_layer)
+                activations.append(hidden)
+        merging_layer = self.layers[-1]
+        self.outputs = merging_layer(
+            [self.activations_list[0][-1], self.activations_list[1][-1]])
+        print('Merging graph 1 and 2 through {}'.format(
+            merging_layer.get_name()))
 
         # Store model variables for easy access
         variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.name)
@@ -118,15 +119,35 @@ class GCNTN(Model):
     def _loss(self):
         # Weight decay loss.
         for var in self.layers[0].vars.values():
-            self.loss += FLAGS.weight_decay * tf.nn.l2_loss(var)
-        # L2 loss.
-        self.loss += tf.nn.l2_loss( \
-            self.sim_kernel.dist_to_sim_tf(self.placeholders['labels']) - \
-            self.pred_sim())
+            self.loss += self.weight_decay * tf.nn.l2_loss(var)
+        if self.loss_func == 'mse':
+            # L2 loss.
+            self.loss += tf.nn.l2_loss( \
+                self.sim_kernel.dist_to_sim_tf(self.placeholders['labels']) - \
+                self.pred_sim())
+        else:
+            raise RuntimeError('Unknown loss function {}'.format(self.loss_func))
 
     def pred_sim(self):
         # return self.outputs
         # return self.kernel_func(self.outputs)
         # return 1 / (1 + tf.exp(self.outputs)) + 0.5
-        return tf.sigmoid(self.outputs)
-    # def name(self):
+        # return tf.sigmoid(self.outputs)
+        # return tf.nn.relu(self.outputs)
+        return tf.identity(self.outputs)
+
+    def _get_support(self, i):
+        if i == 0:
+            return self.support_1
+        elif i == 1:
+            return self.support_2
+        else:
+            assert (False)
+
+    def _get_num_features_nonzero(self, i):
+        if i == 0:
+            return self.num_features_1_nonzero
+        elif i == 1:
+            return self.num_features_2_nonzero
+        else:
+            assert (False)

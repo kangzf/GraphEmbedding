@@ -5,6 +5,7 @@ from utils import get_result_path, create_dir_if_not_exists, load_data, \
 from metrics import Metric, precision_at_ks, mean_reciprocal_rank, \
     mean_squared_error
 from distance import ged
+from similarity import create_sim_kernel
 from results import load_results_as_dict, load_result
 import networkx as nx
 
@@ -51,6 +52,9 @@ args2 = {'astar': {'marker': '*', 'facecolors': 'none', 'edgecolors': 'grey'},
          'siamese_gcntn': {'marker': 'P', \
                            'facecolors': 'none', 'edgecolors': 'red'}
          }
+font = {'family': 'serif',
+        'size': 22}
+matplotlib.rc('font', **font)
 
 
 def exp1():
@@ -150,9 +154,6 @@ def generate_random_graph(n, connected=True):
 
 def exp3():
     """ Plot ged and time for the synthetic dataset. """
-    font = {'family': 'serif',
-            'size': 22}
-    matplotlib.rc('font', **font)
     file = 'ged_astar_beam5_beam10_beam20_beam40_beam80_hungarian_vj_2018-04-29T14:56:38.676491'
     data = read_csv(get_result_path() + '/syn/{}.csv'.format(file))
     models = []
@@ -335,9 +336,6 @@ def plot_apk(dataset, models, rs, true_result, metric, norms):
 
 def plot_apk_helper(dataset, models, rs, true_result, metric, norm, ks, logscale):
     print_ids = []
-    font = {'family': 'serif',
-            'size': 22}
-    matplotlib.rc('font', **font)
     plt.figure(figsize=(16, 10))
     for model in models:
         print(model)
@@ -399,9 +397,6 @@ def plot_mrr_mse(dataset, models, rs, true_result, metric, norms, \
 def plot_mrr_mse_helper(dataset, models, rs, true_result, metric, norm, \
                         sim_kernel, yeta):
     print_ids = []
-    font = {'family': 'serif',
-            'size': 22}
-    matplotlib.rc('font', **font)
     plt.figure(figsize=(16, 10))
     mrr_mse_list = []
     for model in models:
@@ -536,5 +531,62 @@ def get_graph_stats_text(g):
         g.number_of_nodes(), g.number_of_edges(), nx.density(g))
 
 
+def exp9():
+    """ Check similarity kernel. """
+    dataset = 'aids50'
+    model = 'beam80'
+    sim_kernel_name = 'gaussian'
+    yetas1 = [1, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001]
+    middle_yeta = 0.001
+    yetas2 = [middle_yeta]
+    delta_yeta = 0.00008
+    for i in range(1, 6):
+        yetas2.append(middle_yeta + i * delta_yeta)
+        yetas2.append(middle_yeta - i * delta_yeta)
+    result = load_result(dataset, model)
+    for yetas in [yetas1, sorted(yetas2)]:
+        sim_kernels = []
+        for yeta in yetas:
+            sim_kernels.append(create_sim_kernel(sim_kernel_name, yeta))
+        plot_sim_kernel(dataset, result, sim_kernels)
+
+
+def plot_sim_kernel(dataset, result, sim_kernels):
+    dir = '{}/{}/sim'.format(get_result_path(), dataset)
+    create_dir_if_not_exists(dir)
+    m, n = result.m_n()
+    ged_mat = result.dist_sim_mat(norm=False)
+    plt.figure(figsize=(16, 10))
+    for sim_kernel in sim_kernels:
+        for i in range(m):
+            for j in range(n):
+                d = ged_mat[i][j]
+                plt.scatter(ged_mat[i][j], sim_kernel.dist_to_sim(d), s=100)
+        # Plot the function.
+        xs, ys = get_sim_kernel_points(ged_mat, sim_kernel)
+        plt.plot(xs, ys, label=sim_kernel.name())
+    plt.xlabel('GED')
+    plt.ylabel('Similarity')
+    plt.ylim([-0.06, 1.06])
+    plt.legend(loc='best')
+    plt.grid(linestyle='dashed')
+    plt.tight_layout()
+    # plt.show()
+    sp = '{}/sim_{}_{}.png'.format( \
+        dir, dataset, '_'.join([sk.shortname() for sk in sim_kernels]))
+    plt.savefig(sp)
+    print('Saved to {}'.format(sp))
+
+
+def get_sim_kernel_points(ged_mat, sim_kernel):
+    xs = []
+    i = 0
+    while i < np.amax(ged_mat) * 1.05:
+        xs.append(i)
+        i += 0.1
+    ys = [sim_kernel.dist_to_sim(x) for x in xs]
+    return xs, ys
+
+
 if __name__ == '__main__':
-    exp7()
+    exp9()
