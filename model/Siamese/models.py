@@ -1,4 +1,4 @@
-from layers_factory import create_layers
+from layers_factory import create_layers, create_activation
 import sys
 from os.path import dirname, abspath
 
@@ -75,7 +75,8 @@ class GCNTN(Model):
 
         self.input_dim = input_dim
 
-        self.sim_kernel = create_sim_kernel(FLAGS.sim_kernel, FLAGS.yeta)
+        self.sim_kernel = create_sim_kernel(FLAGS.sim_kernel, FLAGS.yeta).dist_to_sim_tf
+        self.final_act = create_activation(FLAGS.final_act, self.sim_kernel)
         self.loss_func = FLAGS.loss_func
         self.weight_decay = FLAGS.weight_decay
         self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)
@@ -123,7 +124,7 @@ class GCNTN(Model):
         if self.loss_func == 'mse':
             # L2 loss.
             self.loss += tf.nn.l2_loss( \
-                self.sim_kernel.dist_to_sim_tf(self.placeholders['labels']) - \
+                self.sim_kernel(self.placeholders['labels']) - \
                 self.pred_sim())
         else:
             raise RuntimeError('Unknown loss function {}'.format(self.loss_func))
@@ -134,7 +135,10 @@ class GCNTN(Model):
         # return 1 / (1 + tf.exp(self.outputs)) + 0.5
         # return tf.sigmoid(self.outputs)
         # return tf.nn.relu(self.outputs)
-        return tf.identity(self.outputs)
+        return self.final_act(self.outputs)
+
+    def pred_sim_without_act(self):
+        return self.outputs
 
     def _get_support(self, i):
         if i == 0:

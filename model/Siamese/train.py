@@ -19,37 +19,37 @@ flags = tf.app.flags
 FLAGS = flags.FLAGS
 
 # For data preprocessing.
-''' dataset: aids50, aids10k, '''
+""" dataset: aids50, aids10k, """
 flags.DEFINE_string('dataset', 'aids50', 'Dataset string.')
-''' valid_percentage: (0, 1). '''
+""" valid_percentage: (0, 1). """
 flags.DEFINE_float('valid_percentage', 0.4,
                    '(# validation graphs) / (# validation + # training graphs.')
-''' node_feat_name: 'type' for aids. '''
+""" node_feat_name: 'type' for aids. """
 flags.DEFINE_string('node_feat_name', 'type', 'Name of the node feature.')
-''' node_feat_encoder: onehot. '''  # TODO: 'random', 'random_cond_on_node_feat'
+""" node_feat_encoder: onehot. """  # TODO: 'random', 'random_cond_on_node_feat'
 flags.DEFINE_string('node_feat_encoder', 'onehot',
                     'How to encode the node feature.')
-''' edge_feat_name: 'valence' for aids. '''  # TODO: really use
+""" edge_feat_name: 'valence' for aids. """  # TODO: really use
 flags.DEFINE_string('edge_feat_name', 'valence', 'Name of the edge feature.')
-''' edge_feat_processor: None. '''  # TODO: 'ECC', 'ToNode'
+""" edge_feat_processor: None. """  # TODO: 'ECC', 'ToNode'
 flags.DEFINE_string('edge_feat_processor', None,
                     'How to process the edge feature.')
-''' dist_metric: ged. '''
+""" dist_metric: ged. """
 flags.DEFINE_string('dist_metric', 'ged', 'Distance metric to use.')
-''' dist_algo: beam80 for ged. '''
+""" dist_algo: beam80 for ged. """
 flags.DEFINE_string('dist_algo', 'beam80',
                     'Ground-truth distance algorithm to use.')
-''' sampler: random. '''  # TODO: density
+""" sampler: random. """  # TODO: density
 flags.DEFINE_string('sampler', 'random', 'Sampler to use.')
-''' sample_num: 1, 2, 3, ..., -1 (infinite/continuous sampling). '''
+""" sample_num: 1, 2, 3, ..., -1 (infinite/continuous sampling). """
 flags.DEFINE_integer('sample_num', -1,
                      'Number of pairs to sample for training.')
-''' sampler_duplicate_removal: False. '''  # TODO: True
+""" sampler_duplicate_removal: False. """  # TODO: True
 flags.DEFINE_boolean('sampler_duplicate_removal', False,
                      'Whether to remove duplicate for sampler or not.')
 
 # For model.
-''' model: gcntn. '''
+""" model: gcntn. """
 flags.DEFINE_string('model', 'siamese_gcntn', 'Model string.')
 flags.DEFINE_integer('num_layers', 4, 'Number of layers.')
 
@@ -59,21 +59,25 @@ flags.DEFINE_string(
     'dropout=True,bias=True,sparse_inputs=True', '')
 flags.DEFINE_string(
     'layer_1',
-    'GraphConvolution:input_dim=32,output_dim=16,act=linear,'
+    'GraphConvolution:input_dim=32,output_dim=16,act=identity,'
     'dropout=True,bias=True,sparse_inputs=False', '')
 flags.DEFINE_string(
     'layer_2',
     'Average', '')
 flags.DEFINE_string(
     'layer_3',
-    'NTN:input_dim=16,feature_map_dim=10,inneract=relu,dropout=True,bias=True', '')
-''' sim_kernel: gaussian. '''  # TODO: linear
+    'NTN:input_dim=16,feature_map_dim=10,inneract=relu,'
+    'dropout=True,bias=True', '')
+""" sim_kernel: gaussian. """  # TODO: linear
 flags.DEFINE_string('sim_kernel', 'gaussian',
                     'Name of the similarity kernel.')
 flags.DEFINE_float('yeta', 0.001, 'yeta for the gaussian kernel function.')
-''' loss_func: mse. '''  # TODO: sigmoid, etc.
+""" final_act: identity, relu, sigmoid, tanh, sim_kernel (same as sim_kernel). """
+flags.DEFINE_string('final_act', 'identity',
+                    'The final activation function applied to the NTN output.')
+""" loss_func: mse. """  # TODO: sigmoid pairwise, etc.
 flags.DEFINE_string('loss_func', 'mse', 'Loss function(s) to use.')
-''' sim_kernel: gaussian. '''  # TODO: linear
+""" sim_kernel: gaussian. """  # TODO: linear
 flags.DEFINE_float('dropout', 0.5, 'Dropout rate (1 - keep probability).')
 flags.DEFINE_float('weight_decay', 5e-4,
                    'Weight for L2 loss on embedding matrix.')
@@ -82,7 +86,7 @@ flags.DEFINE_float('weight_decay', 5e-4,
 flags.DEFINE_integer('batch_size', 2, 'Number of graph pairs in a batch.')
 flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
 flags.DEFINE_integer('iters', 500, 'Number of iterations to train.')
-''' early_stopping: None for no early stopping. '''
+""" early_stopping: None for no early stopping. """
 flags.DEFINE_integer('early_stopping', None,
                      'Tolerance for early stopping (# of iters).')
 
@@ -123,16 +127,20 @@ def run_tf(train_val_test, test_id=None, train_id=None):
     feed_dict = data.get_feed_dict(
         placeholders, dist_calculator, train_val_test, test_id, train_id)
     if train_val_test == 'train':
-        objs = [model.pred_sim(), model.opt_op, model.loss]
+        objs = [model.opt_op, model.loss]
+        # objs = [model.pred_sim(), model.opt_op, model.loss] # TODO: figure out why it's slow
     elif train_val_test == 'val':
         objs = [model.loss]
     elif train_val_test == 'test':
-        objs = [model.pred_sim()]
+        objs = [model.pred_sim_without_act()]
     else:
         raise RuntimeError('Unknown train_val_test {}'.format(train_val_test))
     t = time()
     outs = sess.run(objs, feed_dict=feed_dict)
-    return outs[-1], time() - t
+    time_rtn = time() - t
+    if train_val_test == 'test':
+        outs = sess.run([model.pred_sim()], feed_dict=feed_dict)
+    return outs[-1], time_rtn
 
 
 train_costs, train_times, val_costs, val_times = [], [], [], []

@@ -1,4 +1,9 @@
 from layers import GraphConvolution, Average, NTN
+import sys
+from os.path import dirname, abspath
+
+sys.path.insert(0, "{}/../src".format(dirname(dirname(abspath(__file__)))))
+from similarity import create_sim_kernel
 import tensorflow as tf
 
 
@@ -68,15 +73,17 @@ def create_NTN_layer(layer_info, model):
         logging=model.logging)
 
 
-def create_activation(act):
+def create_activation(act, sim_kernel=None):
     if act == 'relu':
         return tf.nn.relu
-    elif act == 'linear':
+    elif act == 'identity':
         return tf.identity
     elif act == 'sigmoid':
         return tf.sigmoid
     elif act == 'tanh':
         return tf.tanh
+    elif act == 'sim_kernel':
+        return sim_kernel
     else:
         raise RuntimeError('Unknown activation function {}'.format(act))
 
