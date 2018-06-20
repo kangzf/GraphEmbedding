@@ -1,7 +1,7 @@
 from layers import *
 import sys
 from os.path import dirname, abspath
-
+  
 sys.path.insert(0, "{}/../src".format(dirname(dirname(abspath(__file__)))))
 from similarity import create_sim_kernel
 
@@ -95,7 +95,10 @@ class GCNTN(Model):
                                                 # num_supports = self.num_supports,
                                                 logging=self.logging))
 
-            self.layers.append(Average(placeholders=self.placeholders))
+            # self.layers.append(Average(placeholders=self.placeholders))
+
+            self.layers.append(Attention(input_dim=FLAGS.hidden1, 
+                                         sparse_inputs=False))
 
             self.layers.append(NTN(input_dim=FLAGS.hidden1,
                                    feature_map_dim=FLAGS.feature_map_dim,
@@ -123,6 +126,8 @@ class GCNTN(Model):
         self.loss += tf.nn.l2_loss( \
             self.sim_kernel.dist_to_sim_tf(self.placeholders['labels']) - \
             self.pred_sim())
+
+    # def _ran
 
     def pred_sim(self):
         # return self.outputs

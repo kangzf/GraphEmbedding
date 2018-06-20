@@ -203,6 +203,23 @@ class Average(Layer):
 
         return output
 
+class Attention(Layer):
+    """Average layer."""
+    def __init__(self, input_dim,  sparse_inputs=False, **kwargs):
+        super(Attention, self).__init__(**kwargs)
+        self.sparse_inputs = sparse_inputs
+        self.input_dim = input_dim
+
+        with tf.variable_scope(self.name + '_vars'):
+            self.vars['weights'] = glorot([input_dim, input_dim], name='weights')
+
+    def _call(self, inputs):
+        x = inputs # x is N*D
+        temp = tf.reshape(tf.reduce_mean(x, 0), [1,-1])
+        h_avg = tf.tanh(tf.reshape(dot(temp,self.vars['weights'],sparse=self.sparse_inputs),[-1,1]))
+        att = tf.sigmoid(tf.matmul(x,h_avg)) # tf.nn.softmax? 
+        output = tf.matmul(tf.reshape(att, [1,-1]), x)
+        return tf.squeeze(output)
 
 class NTN(Layer):
     """Dense layer."""
