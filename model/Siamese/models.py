@@ -1,7 +1,7 @@
 from layers_factory import create_layers, create_activation
 import sys
 from os.path import dirname, abspath
-
+  
 sys.path.insert(0, "{}/../src".format(dirname(dirname(abspath(__file__)))))
 from similarity import create_sim_kernel
 import tensorflow as tf
@@ -129,6 +129,15 @@ class GCNTN(Model):
                 self.pred_sim())
         else:
             raise RuntimeError('Unknown loss function {}'.format(self.loss_func))
+
+    def _rank_loss(self, gamma):
+        y_pred = self.pred_sim()                
+        pos_interact_score = y_pred[:FLAGS.batch_size_p] # need set new flag for positive sample number & assume pred is a vector
+        neg_interact_score = y_pred[FLAGS.batch_size_p:]
+        diff_mat = tf.reshape(tf.tile(pos_interact_score, [FLAGS.num_negatives]), # need set new flag for negative sampling
+                     (-1, 1)) - neg_interact_score                                # assume negative sampling is conducted in this way: p+n1+n2+..+nk
+        rank_loss = tf.reduce_mean(-tf.log(tf.sigmoid(gamma * diff_mat)))
+        return rank_loss
 
     def pred_sim(self):
         # return self.outputs
