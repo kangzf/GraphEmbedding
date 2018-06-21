@@ -127,7 +127,14 @@ class GCNTN(Model):
             self.sim_kernel.dist_to_sim_tf(self.placeholders['labels']) - \
             self.pred_sim())
 
-    # def _ran
+    def _rank_loss(self, gamma):
+        y_pred = self.pred_sim()                
+        pos_interact_score = y_pred[:FLAGS.batch_size_p] # need set new flag for positive sample number & assume pred is a vector
+        neg_interact_score = y_pred[FLAGS.batch_size_p:]
+        diff_mat = tf.reshape(tf.tile(pos_interact_score, [FLAGS.num_negatives]), # need set new flag for negative sampling
+                     (-1, 1)) - neg_interact_score                                # assume negative sampling is conducted in this way: p+n1+n2+..+nk
+        rank_loss = tf.reduce_mean(-tf.log(tf.sigmoid(gamma * diff_mat)))
+        return rank_loss
 
     def pred_sim(self):
         # return self.outputs
@@ -135,3 +142,8 @@ class GCNTN(Model):
         # return 1 / (1 + tf.exp(self.outputs)) + 0.5
         return tf.sigmoid(self.outputs)
     # def name(self):
+
+
+
+
+
