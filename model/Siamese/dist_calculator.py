@@ -3,7 +3,7 @@ from os.path import dirname, abspath
 
 sys.path.insert(0, "{}/../src".format(dirname(dirname(abspath(__file__)))))
 from utils import get_save_path, save, load
-from distance import ged
+from distance import ged, normalized_dist
 from collections import OrderedDict
 
 
@@ -31,9 +31,7 @@ class DistCalculator(object):
         gid2 = g2.graph['gid']
         pair = (gid1, gid2)
         d = self.gidpair_dist_map.get(pair)
-        if d:
-            return d
-        else:
+        if not d:
             rev_pair = (gid2, gid1)
             rev_d = self.gidpair_dist_map.get(rev_pair)
             if rev_d:
@@ -44,4 +42,4 @@ class DistCalculator(object):
             print('{}Adding entry ({}, {}) to dist map'.format( \
                 ' ' * 80, pair, d))
             save(self.sfn, self.gidpair_dist_map)
-            return d
+        return d, normalized_dist(d, g1, g2)

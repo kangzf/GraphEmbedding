@@ -36,7 +36,7 @@ class GaussianKernel(SimilarityKernel):
         pass
 
     def name(self):
-        return 'Gaussian_yeta={:.2e}'.format(self.yeta)
+        return 'Gaussian_yeta={:.2f}'.format(self.yeta)
 
     def shortname(self):
         return 'g_{:.2e}'.format(self.yeta)

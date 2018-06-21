@@ -52,7 +52,6 @@ flags.DEFINE_boolean('sampler_duplicate_removal', False,
 """ model: gcntn. """
 flags.DEFINE_string('model', 'siamese_gcntn', 'Model string.')
 flags.DEFINE_integer('num_layers', 4, 'Number of layers.')
-
 flags.DEFINE_string(
     'layer_0',
     'GraphConvolution:output_dim=32,act=relu,'
@@ -68,10 +67,14 @@ flags.DEFINE_string(
     'layer_3',
     'NTN:input_dim=16,feature_map_dim=10,inneract=relu,'
     'dropout=True,bias=True', '')
+""" norm_dist: True, False. """
+flags.DEFINE_boolean('norm_dist', True,
+                     'Whether to normalize the distance or not.')
 """ sim_kernel: gaussian. """  # TODO: linear
 flags.DEFINE_string('sim_kernel', 'gaussian',
                     'Name of the similarity kernel.')
-flags.DEFINE_float('yeta', 0.001, 'yeta for the gaussian kernel function.')
+""" yeta: if norm_dist, recommend 0.2; else, try 0.001. """
+flags.DEFINE_float('yeta', 0.2, 'yeta for the gaussian kernel function.')
 """ final_act: identity, relu, sigmoid, tanh, sim_kernel (same as sim_kernel). """
 flags.DEFINE_string('final_act', 'identity',
                     'The final activation function applied to the NTN output.')
@@ -83,7 +86,7 @@ flags.DEFINE_float('weight_decay', 5e-4,
                    'Weight for L2 loss on embedding matrix.')
 
 # For training.
-flags.DEFINE_integer('batch_size', 2, 'Number of graph pairs in a batch.')
+flags.DEFINE_integer('batch_size', 2, 'Number of graphs in a batch.') # TODO: implement
 flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
 flags.DEFINE_integer('iters', 500, 'Number of iterations to train.')
 """ early_stopping: None for no early stopping. """
@@ -109,7 +112,8 @@ placeholders = {
     'support_2': tf.sparse_placeholder(tf.float32),
     'features_2': tf.sparse_placeholder(tf.float32, shape=None),
     'num_supports': tf.placeholder(tf.int32),
-    'labels': tf.placeholder(tf.float32, shape=None),
+    'dist': tf.placeholder(tf.float32, shape=None),
+    'norm_dist': tf.placeholder(tf.float32, shape=None),
     'dropout': tf.placeholder_with_default(0., shape=()),
     'num_features_1_nonzero': tf.placeholder(tf.int32),
     'num_features_2_nonzero': tf.placeholder(tf.int32)
@@ -159,10 +163,10 @@ for iter in range(FLAGS.iters):
     # test_cost, test_time = run_tf('test')
 
     print('Iter:', '%04d' % (iter + 1),
-          'train_loss=', '{:.5f}'.format(train_cost),
-          'time=', '{:.5f}'.format(train_time),
+          'train_loss=', '{:.5f}s'.format(train_cost),
+          'time=', '{:.5f}sec'.format(train_time),
           'val_loss=', '{:.5f}'.format(val_cost),
-          'time=', '{:.5f}'.format(val_time))
+          'time=', '{:.5f}sec'.format(val_time))
     # 'test_loss=', '{:.5f}'.format(test_cost),
     # 'time=', '{:.5f}'.format(test_time))
 
@@ -179,14 +183,18 @@ eval = Eval(FLAGS.dataset, FLAGS.sim_kernel, FLAGS.yeta)
 m, n = data.m_n()
 test_sim_mat = np.zeros((m, n))
 test_time_mat = np.zeros((m, n))
+run_tf('test', 0, 0) # flush the pipeline
 print('i,j,time,sim,true_sim')
 for i in range(m):
     for j in range(n):
         sim_i_j, test_time = run_tf('test', i, j)
-        print('{},{},{:2f}mec,{:.5f},{:.5f}'.format(
-            i, j, test_time * 1000, sim_i_j, eval.get_true_sim(i, j)))
+        test_time *= 1000
+        print('{},{},{:.2f}mec,{:.2f},{:.2f}'.format(
+            i, j, test_time, sim_i_j,
+            eval.get_true_sim(i, j, FLAGS.norm_dist)))
         # assert (0 <= sim_i_j <= 1)
         test_sim_mat[i][i] = sim_i_j
         test_time_mat[i][j] = test_time
 print('Evaluating...')
-eval.eval_test(FLAGS.model, test_sim_mat, test_time_mat)
+results = eval.eval_test(FLAGS.model, test_sim_mat, test_time_mat)
+print(results)

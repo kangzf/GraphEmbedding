@@ -123,8 +123,9 @@ class GCNTN(Model):
             self.loss += self.weight_decay * tf.nn.l2_loss(var)
         if self.loss_func == 'mse':
             # L2 loss.
+            self.temp = self.pred_sim # TODO: investigate
             self.loss += tf.nn.l2_loss( \
-                self.sim_kernel(self.placeholders['labels']) - \
+                self.sim_kernel(self._get_dist()) - \
                 self.pred_sim())
         else:
             raise RuntimeError('Unknown loss function {}'.format(self.loss_func))
@@ -155,3 +156,9 @@ class GCNTN(Model):
             return self.num_features_2_nonzero
         else:
             assert (False)
+
+    def _get_dist(self):
+        if self.FLAGS.norm_dist:
+            return self.placeholders['norm_dist']
+        else:
+            return self.placeholders['dist']

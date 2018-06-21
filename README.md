@@ -15,6 +15,7 @@ Install the following the tools and packages:
 
 * `python3`: Assume `python3` by default.
 * `numpy`
+* `pandas`
 * `scipy`
 * `scikit-learn`
 * `tensorflow`

@@ -60,8 +60,10 @@ class SiameseModelData(Data):
         if test_id is None or train_id is None:
             assert (test_id is None and train_id is None)
             g1, g2 = self._get_graph_pair(train_val_test)
-            feed_dict[placeholders['labels']] = \
-                self._get_dist(g1.get_nxgraph(), g2.get_nxgraph(), dist_calculator)
+            dist, normalized_dist = self._get_dist(
+                g1.get_nxgraph(), g2.get_nxgraph(), dist_calculator)
+            feed_dict[placeholders['dist']] = dist
+            feed_dict[placeholders['norm_dist']] = normalized_dist
         else:
             g1 = self.test_data.get_graph(test_id)
             g2 = self._get_orig_train_graph(train_id)

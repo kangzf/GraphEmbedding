@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 from utils import get_result_path, create_dir_if_not_exists, load_data, \
     get_ts, exec_turnoff_print, prompt, prompt_get_computer_name, \
-    check_nx_version, prompt_get_cpu
+    check_nx_version, prompt_get_cpu, format_float
 from metrics import Metric, precision_at_ks, mean_reciprocal_rank, \
-    mean_squared_error
+    mean_squared_error, average_time
 from distance import ged
 from similarity import create_sim_kernel
 from results import load_results_as_dict, load_result
@@ -322,6 +322,7 @@ def plot_apk(dataset, models, rs, true_result, metric, norms):
     """ Plot ap@k. """
     create_dir_if_not_exists('{}/{}/{}'.format( \
         get_result_path(), dataset, metric))
+    rtn = {}
     for norm in norms:
         ks = []
         k = 1
@@ -329,17 +330,24 @@ def plot_apk(dataset, models, rs, true_result, metric, norms):
         while k < n:
             ks.append(k)
             k *= 2
-        plot_apk_helper(dataset, models, rs, true_result, metric, norm, ks, True)
+        d = plot_apk_helper(
+            dataset, models, rs, true_result, metric, norm, ks, True)
+        rtn.update(d)
         ks = range(1, 31)
-        plot_apk_helper(dataset, models, rs, true_result, metric, norm, ks, False)
+        d = plot_apk_helper(
+            dataset, models, rs, true_result, metric, norm, ks, False)
+        rtn.update(d)
+    return rtn
 
 
 def plot_apk_helper(dataset, models, rs, true_result, metric, norm, ks, logscale):
     print_ids = []
+    rtn = {}
     plt.figure(figsize=(16, 10))
     for model in models:
         print(model)
         aps = precision_at_ks(true_result, rs[model], norm, ks, print_ids)
+        rtn[model] = {'ks': ks, 'aps': aps}
         # print('aps {}: {}'.format(model, aps))
         if logscale:
             pltfunc = plt.semilogx
@@ -357,58 +365,70 @@ def plot_apk_helper(dataset, models, rs, true_result, metric, norm, ks, logscale
     plt.tight_layout()
     # plt.show()
     kss = 'k_{}_{}'.format(min(ks), max(ks))
-    sp = get_result_path() + '/{}/{}/ged_{}_{}_{}_{}_{}.png'.format( \
+    sp = get_result_path() + '/{}/{}/ged_{}_{}_{}_{}{}.png'.format( \
         dataset, metric, metric, dataset, '_'.join(models), kss,
         get_norm_str(norm))
     plt.savefig(sp)
     print('Saved to {}'.format(sp))
+    return {'apk{}'.format(get_norm_str(norm)): rtn}
 
 
 def get_norm_str(norm):
-    if norm:
-        return 'norm'
+    if norm is None:
+        return ''
+    elif norm:
+        return '_norm'
     else:
-        return 'nonorm'
+        return '_nonorm'
 
 
 def exp7():
     dataset = 'aids50'
     models = BASELINE_MODELS
-    metric = 'mse'
+    metric = 'time'
     sim_kernel = 'gaussian'
     yeta = 1.0
     norms = [True, False]
     rs = load_results_as_dict(dataset, models)
     true_result = rs[TRUE_MODEL]
-    plot_mrr_mse(dataset, models, rs, true_result, metric, norms, \
-                 sim_kernel, yeta)
+    plot_mrr_mse_time(
+        dataset, models, rs, true_result, metric, norms, sim_kernel, yeta)
 
 
-def plot_mrr_mse(dataset, models, rs, true_result, metric, norms, \
-                 sim_kernel, yeta):
+def plot_mrr_mse_time(dataset, models, rs, true_result, metric, norms,
+                      sim_kernel, yeta):
     """ Plot mrr or mse. """
-    create_dir_if_not_exists('{}/{}/{}'.format( \
+    create_dir_if_not_exists('{}/{}/{}'.format(
         get_result_path(), dataset, metric))
+    rtn = {}
     for norm in norms:
-        plot_mrr_mse_helper(dataset, models, rs, true_result, metric, norm, \
-                            sim_kernel, yeta)
+        d = plot_mrr_mse_time_helper(
+            dataset, models, rs, true_result, metric, norm, sim_kernel, yeta)
+        rtn.update(d)
+    return rtn
 
 
-def plot_mrr_mse_helper(dataset, models, rs, true_result, metric, norm, \
-                        sim_kernel, yeta):
+def plot_mrr_mse_time_helper(dataset, models, rs, true_result, metric, norm,
+                             sim_kernel, yeta):
     print_ids = []
+    rtn = {}
     plt.figure(figsize=(16, 10))
     mrr_mse_list = []
     for model in models:
         print(model)
         if metric == 'mrr':
-            mrr_mse = mean_reciprocal_rank(true_result, rs[model], norm, print_ids)
+            mrr_mse_time = mean_reciprocal_rank(
+                true_result, rs[model], norm, print_ids)
         elif metric == 'mse':
-            mrr_mse = mean_squared_error(true_result, rs[model], sim_kernel, yeta, norm)
+            mrr_mse_time = mean_squared_error(
+                true_result, rs[model], sim_kernel, yeta, norm)
+        elif metric == 'time':
+            mrr_mse_time = average_time(rs[model])
         else:
             raise RuntimeError('Unknown {}'.format(metric))
-        print('{} {}: {}'.format(metric, model, mrr_mse))
-        mrr_mse_list.append(mrr_mse)
+        print('{} {}: {}'.format(metric, model, mrr_mse_time))
+        rtn[model] = mrr_mse_time
+        mrr_mse_list.append(mrr_mse_time)
     ind = np.arange(len(mrr_mse_list))  # the x locations for the groups
     width = 0.35  # the width of the bars
     bars = plt.bar(ind, mrr_mse_list, width)
@@ -417,15 +437,21 @@ def plot_mrr_mse_helper(dataset, models, rs, true_result, metric, norm, \
     autolabel(bars)
     plt.xlabel('model')
     plt.xticks(ind, models)
-    plt.ylabel(metric)
+    if metric == 'time':
+        ylabel = 'time (msec)'
+        norm = None
+    else:
+        ylabel = metric
+    plt.ylabel(ylabel)
     plt.grid(linestyle='dashed')
     plt.tight_layout()
     # plt.show()
-    sp = get_result_path() + '/{}/{}/ged_{}_{}_{}_{}.png'.format( \
+    sp = get_result_path() + '/{}/{}/ged_{}_{}_{}{}.png'.format( \
         dataset, metric, metric, dataset, '_'.join(models),
         get_norm_str(norm))
     plt.savefig(sp)
     print('Saved to {}'.format(sp))
+    return {'{}{}'.format(metric, get_norm_str(norm)): rtn}
 
 
 def autolabel(rects):
@@ -433,7 +459,7 @@ def autolabel(rects):
         height = rect.get_height()
         plt.text( \
             rect.get_x() + rect.get_width() / 2., 1.005 * height, \
-            '{:.2f}'.format(height), ha='center', va='bottom')
+            format_float(height), ha='center', va='bottom')
 
 
 def exp8():
@@ -486,7 +512,7 @@ def exp8():
                  for j in gids]
             info_dict['plot_save_path'] = \
                 get_result_path() + \
-                '/{}/query_vis/{}/query_vis_{}_{}_{}_{}.png'.format( \
+                '/{}/query_vis/{}/query_vis_{}_{}_{}{}.png'.format( \
                     dataset, model, dataset, model, i, get_norm_str(norm))
             vis(q, gs, info_dict)
 
@@ -536,26 +562,33 @@ def exp9():
     dataset = 'aids50'
     model = 'beam80'
     sim_kernel_name = 'gaussian'
+    norms = [True, False]
     yetas1 = [1, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001]
-    middle_yeta = 0.001
+    yetas2 = np.arange(0.1, 1.1, 0.1)
+    print(yetas2)
+    yetas3 = get_gaussian_yetas(0.0001, 0.001)
+    result = load_result(dataset, model)
+    for norm in norms:
+        for yetas in [yetas1, sorted(yetas2), sorted(yetas3)]:
+            sim_kernels = []
+            for yeta in yetas:
+                sim_kernels.append(create_sim_kernel(sim_kernel_name, yeta))
+            plot_sim_kernel(dataset, result, sim_kernels, norm)
+
+
+def get_gaussian_yetas(middle_yeta, delta_yeta):
     yetas2 = [middle_yeta]
-    delta_yeta = 0.00008
     for i in range(1, 6):
         yetas2.append(middle_yeta + i * delta_yeta)
         yetas2.append(middle_yeta - i * delta_yeta)
-    result = load_result(dataset, model)
-    for yetas in [yetas1, sorted(yetas2)]:
-        sim_kernels = []
-        for yeta in yetas:
-            sim_kernels.append(create_sim_kernel(sim_kernel_name, yeta))
-        plot_sim_kernel(dataset, result, sim_kernels)
+    return yetas2
 
 
-def plot_sim_kernel(dataset, result, sim_kernels):
+def plot_sim_kernel(dataset, result, sim_kernels, norm):
     dir = '{}/{}/sim'.format(get_result_path(), dataset)
     create_dir_if_not_exists(dir)
     m, n = result.m_n()
-    ged_mat = result.dist_sim_mat(norm=False)
+    ged_mat = result.dist_sim_mat(norm=norm)
     plt.figure(figsize=(16, 10))
     for sim_kernel in sim_kernels:
         for i in range(m):
@@ -572,8 +605,9 @@ def plot_sim_kernel(dataset, result, sim_kernels):
     plt.grid(linestyle='dashed')
     plt.tight_layout()
     # plt.show()
-    sp = '{}/sim_{}_{}.png'.format( \
-        dir, dataset, '_'.join([sk.shortname() for sk in sim_kernels]))
+    sp = '{}/sim_{}_{}{}.png'.format(
+        dir, dataset, '_'.join(
+            [sk.shortname() for sk in sim_kernels]), get_norm_str(norm))
     plt.savefig(sp)
     print('Saved to {}'.format(sp))
 
@@ -589,4 +623,4 @@ def get_sim_kernel_points(ged_mat, sim_kernel):
 
 
 if __name__ == '__main__':
-    exp9()
+    exp7()

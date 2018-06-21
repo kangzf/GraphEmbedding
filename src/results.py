@@ -1,5 +1,6 @@
 from utils import get_result_path, get_save_path, get_model_path, \
     get_file_base_id, load_data, load_pkl, save_pkl
+from distance import normalized_dist
 from similarity import create_sim_kernel
 from glob import glob
 import numpy as np
@@ -110,6 +111,9 @@ class Result(object):
     def time(self, qid, gid):
         raise NotImplementedError()
 
+    def time_mat(self):
+        raise NotImplementedError()
+
     def mat(self, metric, norm):
         raise NotImplementedError()
 
@@ -132,10 +136,10 @@ class DistanceModelResult(Result):
         test_data = load_data(self.dataset, False)
         m, n = self.dist_mat_.shape
         for i in range(m):
-            lm = test_data.graphs[i].number_of_nodes()
             for j in range(n):
-                ln = train_data.graphs[j].number_of_nodes()
-                self.dist_norm_mat_[i][j] = 2 * self.dist_mat_[i][j] / (lm + ln)
+                self.dist_norm_mat_[i][j] = normalized_dist(
+                    self.dist_mat_[i][j],
+                    test_data.graphs[i], train_data.graphs[j])
         self.time_mat_ = self._load_result_mat(dataset, 'time')
         self.sort_id_mat_ = np.argsort(self.dist_mat_, kind='mergesort')
         self.dist_norm_sort_id_mat_ = np.argsort(self.dist_norm_mat_, kind='mergesort')
@@ -159,6 +163,9 @@ class DistanceModelResult(Result):
 
     def time(self, qid, gid):
         return self.time_mat_[qid][gid]
+
+    def time_mat(self):
+        return self.time_mat_
 
     def mat(self, metric, norm):
         if metric == self.dist_metric():
@@ -317,6 +324,9 @@ class SiameseModelResult(SimilarityBasedModelResult):
 
     def time(self, qid, gid):
         return None
+
+    def time_mat(self):
+        return self.time_mat_
 
     def mat(self, metric, *unused):
         if metric == 'sim':

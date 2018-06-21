@@ -2,7 +2,7 @@ import sys
 from os.path import dirname, abspath
 
 sys.path.insert(0, "{}/../src".format(dirname(dirname(abspath(__file__)))))
-from exp import BASELINE_MODELS, TRUE_MODEL, plot_apk, plot_mrr_mse
+from exp import BASELINE_MODELS, TRUE_MODEL, plot_apk, plot_mrr_mse_time
 from results import load_results_as_dict, load_result
 
 
@@ -15,19 +15,30 @@ class Eval(object):
         self.sim_kernel_name = sim_kernel_name
         self.yeta = yeta
 
-    def get_true_sim(self, query_id, train_id):
-        norm = False
-        sim_mat = self.true_result.sim_mat( \
+    def get_true_sim(self, query_id, train_id, norm):
+        sim_mat = self.true_result.sim_mat(
             self.sim_kernel_name, self.yeta, norm)
         return sim_mat[query_id][train_id]
 
     def eval_test(self, cur_model, sim_mat, time_mat):
         self.models.append(cur_model)
-        self.rs[cur_model] = load_result( \
+        self.rs[cur_model] = load_result(
             self.dataset, cur_model, sim_mat=sim_mat, time_mat=time_mat)
         norms = [True, False]
-        plot_apk( \
+        self.results = {}
+        d = plot_apk(
             self.dataset, self.models, self.rs, self.true_result, 'ap@k', norms)
-        plot_mrr_mse( \
+        self.results.update(d)
+        d = plot_mrr_mse_time(
+            self.dataset, self.models, self.rs, self.true_result, 'time', norms,
+            self.sim_kernel_name, self.yeta)
+        self.results.update(d)
+        d = plot_mrr_mse_time(
+            self.dataset, self.models, self.rs, self.true_result, 'mrr', norms,
+            self.sim_kernel_name, self.yeta)
+        self.results.update(d)
+        d = plot_mrr_mse_time(
             self.dataset, self.models, self.rs, self.true_result, 'mse', norms,
             self.sim_kernel_name, self.yeta)
+        self.results.update(d)
+        return self.results
