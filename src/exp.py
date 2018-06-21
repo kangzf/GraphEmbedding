@@ -318,7 +318,7 @@ def exp6():
     plot_apk(dataset, models, rs, true_result, metric, norms)
 
 
-def plot_apk(dataset, models, rs, true_result, metric, norms):
+def plot_apk(dataset, models, rs, true_result, metric, norms, plot_results=True):
     """ Plot ap@k. """
     create_dir_if_not_exists('{}/{}/{}'.format( \
         get_result_path(), dataset, metric))
@@ -330,25 +330,31 @@ def plot_apk(dataset, models, rs, true_result, metric, norms):
         while k < n:
             ks.append(k)
             k *= 2
+        plot_apk_helper(
+            dataset, models, rs, true_result, metric, norm, ks,
+            True, plot_results)
+        ks = range(1, n)
         d = plot_apk_helper(
-            dataset, models, rs, true_result, metric, norm, ks, True)
-        rtn.update(d)
-        ks = range(1, 31)
-        d = plot_apk_helper(
-            dataset, models, rs, true_result, metric, norm, ks, False)
+            dataset, models, rs, true_result, metric, norm, ks,
+            False, plot_results)
         rtn.update(d)
     return rtn
 
 
-def plot_apk_helper(dataset, models, rs, true_result, metric, norm, ks, logscale):
+def plot_apk_helper(dataset, models, rs, true_result, metric, norm, ks,
+                    logscale, plot_results):
     print_ids = []
     rtn = {}
-    plt.figure(figsize=(16, 10))
     for model in models:
         print(model)
         aps = precision_at_ks(true_result, rs[model], norm, ks, print_ids)
         rtn[model] = {'ks': ks, 'aps': aps}
         # print('aps {}: {}'.format(model, aps))
+    rtn = {'apk{}'.format(get_norm_str(norm)): rtn}
+    if not plot_results:
+        return rtn
+    plt.figure(figsize=(16, 10))
+    for model in models:
         if logscale:
             pltfunc = plt.semilogx
         else:
@@ -370,7 +376,7 @@ def plot_apk_helper(dataset, models, rs, true_result, metric, norm, ks, logscale
         get_norm_str(norm))
     plt.savefig(sp)
     print('Saved to {}'.format(sp))
-    return {'apk{}'.format(get_norm_str(norm)): rtn}
+    return rtn
 
 
 def get_norm_str(norm):
@@ -396,23 +402,23 @@ def exp7():
 
 
 def plot_mrr_mse_time(dataset, models, rs, true_result, metric, norms,
-                      sim_kernel, yeta):
+                      sim_kernel, yeta, plot_results=True):
     """ Plot mrr or mse. """
     create_dir_if_not_exists('{}/{}/{}'.format(
         get_result_path(), dataset, metric))
     rtn = {}
     for norm in norms:
         d = plot_mrr_mse_time_helper(
-            dataset, models, rs, true_result, metric, norm, sim_kernel, yeta)
+            dataset, models, rs, true_result, metric, norm, sim_kernel, yeta,
+            plot_results)
         rtn.update(d)
     return rtn
 
 
 def plot_mrr_mse_time_helper(dataset, models, rs, true_result, metric, norm,
-                             sim_kernel, yeta):
+                             sim_kernel, yeta, plot_results):
     print_ids = []
     rtn = {}
-    plt.figure(figsize=(16, 10))
     mrr_mse_list = []
     for model in models:
         print(model)
@@ -429,6 +435,10 @@ def plot_mrr_mse_time_helper(dataset, models, rs, true_result, metric, norm,
         print('{} {}: {}'.format(metric, model, mrr_mse_time))
         rtn[model] = mrr_mse_time
         mrr_mse_list.append(mrr_mse_time)
+    rtn = {'{}{}'.format(metric, get_norm_str(norm)): rtn}
+    if not plot_results:
+        return rtn
+    plt.figure(figsize=(16, 10))
     ind = np.arange(len(mrr_mse_list))  # the x locations for the groups
     width = 0.35  # the width of the bars
     bars = plt.bar(ind, mrr_mse_list, width)
@@ -451,7 +461,7 @@ def plot_mrr_mse_time_helper(dataset, models, rs, true_result, metric, norm,
         get_norm_str(norm))
     plt.savefig(sp)
     print('Saved to {}'.format(sp))
-    return {'{}{}'.format(metric, get_norm_str(norm)): rtn}
+    return rtn
 
 
 def autolabel(rects):
@@ -623,4 +633,4 @@ def get_sim_kernel_points(ged_mat, sim_kernel):
 
 
 if __name__ == '__main__':
-    exp7()
+    exp6()

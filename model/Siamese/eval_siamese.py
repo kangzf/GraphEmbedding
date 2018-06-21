@@ -20,25 +20,26 @@ class Eval(object):
             self.sim_kernel_name, self.yeta, norm)
         return sim_mat[query_id][train_id]
 
-    def eval_test(self, cur_model, sim_mat, time_mat):
+    def eval_test(self, cur_model, sim_mat, time_mat, plot_results):
         self.models.append(cur_model)
         self.rs[cur_model] = load_result(
             self.dataset, cur_model, sim_mat=sim_mat, time_mat=time_mat)
         norms = [True, False]
         self.results = {}
         d = plot_apk(
-            self.dataset, self.models, self.rs, self.true_result, 'ap@k', norms)
+            self.dataset, self.models, self.rs, self.true_result, 'ap@k', norms,
+            plot_results)
         self.results.update(d)
         d = plot_mrr_mse_time(
             self.dataset, self.models, self.rs, self.true_result, 'time', norms,
-            self.sim_kernel_name, self.yeta)
+            self.sim_kernel_name, self.yeta, plot_results)
         self.results.update(d)
         d = plot_mrr_mse_time(
             self.dataset, self.models, self.rs, self.true_result, 'mrr', norms,
-            self.sim_kernel_name, self.yeta)
+            self.sim_kernel_name, self.yeta, plot_results)
         self.results.update(d)
         d = plot_mrr_mse_time(
             self.dataset, self.models, self.rs, self.true_result, 'mse', norms,
-            self.sim_kernel_name, self.yeta)
+            self.sim_kernel_name, self.yeta, plot_results)
         self.results.update(d)
         return self.results

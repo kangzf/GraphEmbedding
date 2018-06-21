@@ -16,13 +16,6 @@ FLAGS = tf.app.flags.FLAGS
 exec_turnoff_print()
 
 
-def check_flags(FLAGS):
-    assert (FLAGS.sample_num >= -1)
-    assert (FLAGS.yeta >= 0)
-    assert (FLAGS.num_layers >= 2)
-    # TODO: finish.
-
-
 class SiameseModelData(Data):
     def __init__(self):
         super().__init__('{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format( \

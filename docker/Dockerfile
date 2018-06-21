@@ -52,5 +52,4 @@ WORKDIR /workspace
 # rsync -avzh ~/Documents/GraphEmbedding yba@qilin.cs.ucla.edu:/home/yba/
 # docker build .
 # docker tag 89c8df0682d5 yba_graphembedding
-# nvidia-docker run -v /home/yba/GraphEmbedding:/workspace -it yba_graphembedding bash
-# nvidia-docker run -v /home/yba/GraphEmbedding:/workspace --env CUDA_VISIBLE_DEVICES=<> yba_graphembedding python model/Siamese/train.py
+# nvidia-docker run -v /home/yba/GraphEmbedding:/workspace --env CUDA_VISIBLE_DEVICES=7 -it yba_graphembedding bash

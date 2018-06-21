@@ -1,8 +1,9 @@
 from __future__ import division
 from __future__ import print_function
 
+from utils_siamese import check_flags
 from eval_siamese import Eval
-from data_siamese import check_flags, SiameseModelData
+from data_siamese import SiameseModelData
 from dist_calculator import DistCalculator
 from models import GCNTN
 from time import time
@@ -85,13 +86,17 @@ flags.DEFINE_float('dropout', 0.5, 'Dropout rate (1 - keep probability).')
 flags.DEFINE_float('weight_decay', 5e-4,
                    'Weight for L2 loss on embedding matrix.')
 
-# For training.
+# For training and validating.
 flags.DEFINE_integer('batch_size', 2, 'Number of graphs in a batch.') # TODO: implement
 flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
 flags.DEFINE_integer('iters', 500, 'Number of iterations to train.')
 """ early_stopping: None for no early stopping. """
 flags.DEFINE_integer('early_stopping', None,
                      'Tolerance for early stopping (# of iters).')
+
+# For testing.
+flags.DEFINE_boolean('plot_results', False,
+                     'Whether to plot the results or not.')
 
 check_flags(FLAGS)
 
@@ -163,7 +168,7 @@ for iter in range(FLAGS.iters):
     # test_cost, test_time = run_tf('test')
 
     print('Iter:', '%04d' % (iter + 1),
-          'train_loss=', '{:.5f}s'.format(train_cost),
+          'train_loss=', '{:.5f}'.format(train_cost),
           'time=', '{:.5f}sec'.format(train_time),
           'val_loss=', '{:.5f}'.format(val_cost),
           'time=', '{:.5f}sec'.format(val_time))
@@ -196,5 +201,6 @@ for i in range(m):
         test_sim_mat[i][i] = sim_i_j
         test_time_mat[i][j] = test_time
 print('Evaluating...')
-results = eval.eval_test(FLAGS.model, test_sim_mat, test_time_mat)
+results = eval.eval_test(FLAGS.model, test_sim_mat, test_time_mat,
+                         FLAGS.plot_results)
 print(results)
