@@ -274,3 +274,12 @@ def check_nx_version():
     if nxvg != nxva:
         raise RuntimeError( \
             'Wrong networkx version! Need {} instead of {}'.format(nxvg, nxva))
+
+
+def format_float(f):
+    if f < 1e-5:
+        return '{:.2e}'.format(f)
+    elif f < 1:
+        return '{:.4f}'.format(f)
+    else:
+        return '{:.2f}'.format(f)

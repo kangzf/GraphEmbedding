@@ -53,6 +53,10 @@ def ged(g1, g2, algo, debug=False, timeit=False):
     return tuple(rtn)
 
 
+def normalized_dist(d, g1, g2):
+    return 2 * d / (g1.number_of_nodes() + g2.number_of_nodes())
+
+
 def setup_temp_data_folder(gp, append_str):
     tp = gp + '/data/temp_{}'.format(append_str)
     exec('rm -rf {} && mkdir {}'.format(tp, tp))

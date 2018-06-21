@@ -81,10 +81,21 @@ def mean_squared_error(true_r, pred_r, sim_kernel, yeta, norm):
         true_r.sim_mat(sim_kernel, yeta, norm) - \
         pred_r.sim_mat(sim_kernel, yeta, norm)) / (m * n)
 
+
+def average_time(r):
+    """
+    :param true_r: 
+    :param pred_r: 
+    :return: 
+    """
+    return np.mean(r.time_mat())
+
+
 if __name__ == '__main__':
     x = np.array([[14, 40, 33, 14, 28]])
     y = np.array([[11, 37, 36, 9, 30]])
     from distance import gaussian_kernel
+
     sim_x = gaussian_kernel(x, 1.0)
     sim_y = gaussian_kernel(y, 1.0)
     print('sim_x', sim_x)
