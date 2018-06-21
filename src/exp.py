@@ -346,7 +346,6 @@ def plot_apk_helper(dataset, models, rs, true_result, metric, norm, ks,
     print_ids = []
     rtn = {}
     for model in models:
-        print(model)
         aps = precision_at_ks(true_result, rs[model], norm, ks, print_ids)
         rtn[model] = {'ks': ks, 'aps': aps}
         # print('aps {}: {}'.format(model, aps))
@@ -421,7 +420,6 @@ def plot_mrr_mse_time_helper(dataset, models, rs, true_result, metric, norm,
     rtn = {}
     mrr_mse_list = []
     for model in models:
-        print(model)
         if metric == 'mrr':
             mrr_mse_time = mean_reciprocal_rank(
                 true_result, rs[model], norm, print_ids)
@@ -432,7 +430,7 @@ def plot_mrr_mse_time_helper(dataset, models, rs, true_result, metric, norm,
             mrr_mse_time = average_time(rs[model])
         else:
             raise RuntimeError('Unknown {}'.format(metric))
-        print('{} {}: {}'.format(metric, model, mrr_mse_time))
+        # print('{} {}: {}'.format(metric, model, mrr_mse_time))
         rtn[model] = mrr_mse_time
         mrr_mse_list.append(mrr_mse_time)
     rtn = {'{}{}'.format(metric, get_norm_str(norm)): rtn}

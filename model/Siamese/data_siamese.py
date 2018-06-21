@@ -46,13 +46,13 @@ class SiameseModelData(Data):
     def input_dim(self):
         return self.node_feat_encoder.input_dim()
 
-    def get_feed_dict(self, placeholders, dist_calculator, train_val_test, \
+    def get_feed_dict(self, placeholders, dist_calculator, tvt, \
                       test_id, train_id):
         feed_dict = dict()
         # no pair is specified == train or val
         if test_id is None or train_id is None:
             assert (test_id is None and train_id is None)
-            g1, g2 = self._get_graph_pair(train_val_test)
+            g1, g2 = self._get_graph_pair(tvt)
             dist, normalized_dist = self._get_dist(
                 g1.get_nxgraph(), g2.get_nxgraph(), dist_calculator)
             feed_dict[placeholders['dist']] = dist
@@ -73,7 +73,8 @@ class SiameseModelData(Data):
             g1.get_node_features()[1].shape  # TODO: refactor
         feed_dict[placeholders['num_features_2_nonzero']] = \
             g2.get_node_features()[1].shape
-        feed_dict[placeholders['dropout']] = FLAGS.dropout
+        if tvt == 'train' or tvt == 'val':
+            feed_dict[placeholders['dropout']] = FLAGS.dropout
         return feed_dict
 
     def m_n(self):

@@ -1,10 +1,11 @@
 from __future__ import division
 from __future__ import print_function
 
-from utils_siamese import check_flags
+from utils_siamese import check_flags, print_msec
 from eval_siamese import Eval
 from data_siamese import SiameseModelData
 from dist_calculator import DistCalculator
+from saver import Saver
 from models import GCNTN
 from time import time
 import numpy as np
@@ -17,7 +18,7 @@ tf.set_random_seed(seed)
 
 # Hyper-parameters.
 flags = tf.app.flags
-FLAGS = flags.FLAGS
+FLAGS = tf.app.flags.FLAGS
 
 # For data preprocessing.
 """ dataset: aids50, aids10k, """
@@ -87,21 +88,21 @@ flags.DEFINE_float('weight_decay', 5e-4,
                    'Weight for L2 loss on embedding matrix.')
 
 # For training and validating.
-flags.DEFINE_integer('batch_size', 2, 'Number of graphs in a batch.') # TODO: implement
+flags.DEFINE_integer('batch_size', 2, 'Number of graphs in a batch.')  # TODO: implement
 flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
-flags.DEFINE_integer('iters', 500, 'Number of iterations to train.')
+flags.DEFINE_integer('iters', 5, 'Number of iterations to train.')
 """ early_stopping: None for no early stopping. """
 flags.DEFINE_integer('early_stopping', None,
                      'Tolerance for early stopping (# of iters).')
+flags.DEFINE_boolean('log', False,
+                     'Whether to log the results via Tensorboard, etc. or not.')
 
 # For testing.
-flags.DEFINE_boolean('plot_results', False,
+flags.DEFINE_boolean('plot_results', True,
                      'Whether to plot the results or not.')
 
 check_flags(FLAGS)
-
 data = SiameseModelData()
-
 dist_calculator = DistCalculator(FLAGS.dataset, FLAGS.dist_metric,
                                  FLAGS.dist_algo)
 
@@ -125,42 +126,47 @@ placeholders = {
 }
 
 model = model_func(
-    FLAGS, placeholders, input_dim=data.input_dim(), logging=True)
-
+    FLAGS, placeholders, input_dim=data.input_dim(), logging=FLAGS.log)
 sess = tf.Session()
-
+saver = Saver(FLAGS, sess)
 sess.run(tf.global_variables_initializer())
 
 
-def run_tf(train_val_test, test_id=None, train_id=None):
+def run_tf(tvt, test_id=None, train_id=None, iter=None):
     feed_dict = data.get_feed_dict(
-        placeholders, dist_calculator, train_val_test, test_id, train_id)
-    if train_val_test == 'train':
+        placeholders, dist_calculator, tvt, test_id, train_id)
+    if tvt == 'train':
         objs = [model.opt_op, model.loss]
         # objs = [model.pred_sim(), model.opt_op, model.loss] # TODO: figure out why it's slow
-    elif train_val_test == 'val':
+    elif tvt == 'val':
         objs = [model.loss]
-    elif train_val_test == 'test':
+    elif tvt == 'test':
         objs = [model.pred_sim_without_act()]
     else:
-        raise RuntimeError('Unknown train_val_test {}'.format(train_val_test))
+        raise RuntimeError('Unknown train_val_test {}'.format(tvt))
+    objs = saver.proc_objs(objs, tvt)
     t = time()
     outs = sess.run(objs, feed_dict=feed_dict)
     time_rtn = time() - t
-    if train_val_test == 'test':
-        outs = sess.run([model.pred_sim()], feed_dict=feed_dict)
+    saver.proc_outs(outs, tvt, iter)
+    if tvt == 'test':
+        # tf_result = sess.run([model.pred_sim()], feed_dict=feed_dict)[-1]
+        # print('tf result', tf_result[-1])
+        np_result = model.apply_final_act_np(outs[-1])
+        # print('np result', np_result)
+        outs[-1] = np_result
     return outs[-1], time_rtn
 
 
 train_costs, train_times, val_costs, val_times = [], [], [], []
 for iter in range(FLAGS.iters):
     # Train.
-    train_cost, train_time = run_tf('train')
+    train_cost, train_time = run_tf('train', iter=iter)
     train_costs.append(train_cost)
     train_times.append(train_time)
 
     # Validate.
-    val_cost, val_time = run_tf('val')
+    val_cost, val_time = run_tf('val', iter=iter)
     val_costs.append(val_cost)
     val_times.append(val_time)
 
@@ -169,9 +175,9 @@ for iter in range(FLAGS.iters):
 
     print('Iter:', '%04d' % (iter + 1),
           'train_loss=', '{:.5f}'.format(train_cost),
-          'time=', '{:.5f}sec'.format(train_time),
+          'time=', print_msec(train_time),
           'val_loss=', '{:.5f}'.format(val_cost),
-          'time=', '{:.5f}sec'.format(val_time))
+          'time=', print_msec(val_time))
     # 'test_loss=', '{:.5f}'.format(test_cost),
     # 'time=', '{:.5f}'.format(test_time))
 
@@ -184,23 +190,22 @@ for iter in range(FLAGS.iters):
 print('Optimization Finished!')
 
 # Test.
-eval = Eval(FLAGS.dataset, FLAGS.sim_kernel, FLAGS.yeta)
+eval = Eval(FLAGS.dataset, FLAGS.sim_kernel, FLAGS.yeta, FLAGS.plot_results)
 m, n = data.m_n()
 test_sim_mat = np.zeros((m, n))
 test_time_mat = np.zeros((m, n))
-run_tf('test', 0, 0) # flush the pipeline
+run_tf('test', 0, 0)  # flush the pipeline
 print('i,j,time,sim,true_sim')
 for i in range(m):
     for j in range(n):
         sim_i_j, test_time = run_tf('test', i, j)
         test_time *= 1000
-        print('{},{},{:.2f}mec,{:.2f},{:.2f}'.format(
+        print('{},{},{:.2f}mec,{:.4f},{:.4f}'.format(
             i, j, test_time, sim_i_j,
             eval.get_true_sim(i, j, FLAGS.norm_dist)))
         # assert (0 <= sim_i_j <= 1)
         test_sim_mat[i][i] = sim_i_j
         test_time_mat[i][j] = test_time
 print('Evaluating...')
-results = eval.eval_test(FLAGS.model, test_sim_mat, test_time_mat,
-                         FLAGS.plot_results)
-print(results)
+results = eval.eval_test(FLAGS.model, test_sim_mat, test_time_mat)
+print('Results generated with {} metrics'.format(len(results)))

@@ -12,7 +12,7 @@ class SimilarityKernel(object):
     def name_suffix(self):
         return ''
 
-    def dist_to_sim(self, dist, max_dist):
+    def dist_to_sim_np(self, dist, max_dist):
         raise NotImplementedError()
 
     def dist_to_sim_tf(self, dist, max_dist):
@@ -20,7 +20,7 @@ class SimilarityKernel(object):
 
 
 class LinearKernel:
-    def dist_to_sim(self, dist, max_dist):
+    def dist_to_sim_np(self, dist, max_dist):
         return self._d_to_s(dist, max_dist)
 
     def dist_to_sim_tf(self, dist, max_dist):
@@ -41,7 +41,7 @@ class GaussianKernel(SimilarityKernel):
     def shortname(self):
         return 'g_{:.2e}'.format(self.yeta)
 
-    def dist_to_sim(self, dist, *unused):
+    def dist_to_sim_np(self, dist, *unused):
         return np.exp(-self.yeta * np.square(dist))
 
     def dist_to_sim_tf(self, dist, *unuse):

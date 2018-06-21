@@ -158,7 +158,7 @@ class DistanceModelResult(Result):
 
     def sim_mat(self, sim_kernel, yeta, norm):
         rtn = create_sim_kernel(sim_kernel, yeta). \
-            dist_to_sim(self.dist_mat(norm))
+            dist_to_sim_np(self.dist_mat(norm))
         return rtn
 
     def time(self, qid, gid):
@@ -183,10 +183,13 @@ class DistanceModelResult(Result):
         file_p = get_result_path() + '/{}/{}/{}_{}_mat_{}_{}_*.npy'.format( \
             dataset, metric, self.dist_metric(), metric, dataset, self.model_)
         li = glob(file_p)
-        if len(li) != 1:
-            raise RuntimeError('Files for {}: {}'.format(file_p, li))
-        file = li[0]
+        if not li:
+            raise RuntimeError('No results found {}'.format(file_p))
+        file = self._choose_result_file(li)
         return np.load(file)
+
+    def _choose_result_file(self, files):
+        return files[0] # TODO: smart choice and cross-checking
 
     def _select_dist_mat(self, norm):
         return self.dist_norm_mat_ if norm else self.dist_mat_
