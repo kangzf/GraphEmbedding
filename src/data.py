@@ -1,6 +1,7 @@
 from utils import get_train_str, get_data_path, get_save_path, sorted_nicely, \
     save, load
 import networkx as nx
+import random
 from random import randint
 from glob import glob
 
@@ -81,6 +82,18 @@ class AIDS10kData(AIDSData):
     def sort(self):
         return sorted_nicely
 
+    def _remove_valence(self, g):
+        for n1, n2, d in g.edges(data=True):
+            d.pop('valence', None)
+
+
+class AIDS10kNEFData(AIDS10kData):
+    def init(self):
+        self.graphs = AIDS10kData(self.train).graphs
+        for g in self.graphs:
+            self._remove_valence(g)
+        print('Processed {} graphs: valence removed'.format(len(self.graphs)))
+
 
 class AIDS10kSmallData(AIDSData):
     def get_folder_name(self):
@@ -99,3 +112,24 @@ class AIDS50Data(AIDSData):
 
     def sort(self):
         return sorted_nicely
+
+
+class AIDS50NEFData(AIDS10kData):
+    def init(self):
+        self.graphs = []
+        for g in AIDS10kData(self.train).graphs:
+            if g.number_of_nodes() <= 12:
+                self.graphs.append(g)
+        random.Random(123).shuffle(self.graphs)
+        if self.train:
+            self.graphs = self.graphs[0:50]
+        else:
+            self.graphs = self.graphs[0:10]
+        for g in self.graphs:
+            self._remove_valence(g)
+        print('Processed {} graphs: valence removed'.format(len(self.graphs)))
+
+
+if __name__ == '__main__':
+    from utils import load_data
+    data = load_data('aids50nef', True)

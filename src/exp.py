@@ -202,7 +202,7 @@ def exp4():
     row_graphs = load_data(dataset, train=False)
     col_graphs = load_data(dataset, train=True)
     num_cpu = prompt_get_cpu()
-    exec_turnoff_print()
+    # exec_turnoff_print()
     real_dataset_run_helper(dataset, model, row_graphs, col_graphs, num_cpu)
 
 
@@ -212,6 +212,9 @@ def real_dataset_run_helper(dataset, model, row_graphs, col_graphs, num_cpu):
     ged_mat = np.zeros((m, n))
     time_mat = np.zeros((m, n))
     outdir = '{}/{}'.format(get_result_path(), dataset)
+    create_dir_if_not_exists(outdir + '/csv')
+    create_dir_if_not_exists(outdir + '/ged')
+    create_dir_if_not_exists(outdir + '/time')
     computer_name = prompt_get_computer_name()
     csv_fn = '{}/csv/ged_{}_{}_{}_{}_{}cpus.csv'.format( \
         outdir, dataset, model, get_ts(), computer_name, num_cpu)
@@ -631,4 +634,4 @@ def get_sim_kernel_points(ged_mat, sim_kernel):
 
 
 if __name__ == '__main__':
-    exp6()
+    exp4()
