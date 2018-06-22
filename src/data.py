@@ -7,7 +7,7 @@ from glob import glob
 
 
 class Data(object):
-    def __init__(self, name_str):
+    def __init__(self, name_str, FLAGS=None):
         name = self.__class__.__name__ + '_' + name_str + self.name_suffix()
         self.name = name
         sfn = self.save_filename()
@@ -16,7 +16,7 @@ class Data(object):
             self.__dict__ = temp
             print('%s loaded from %s' % (name, sfn))
         else:
-            self.init()
+            self.init(FLAGS)
             save(sfn, self.__dict__)
             print('%s saved to %s' % (name, sfn))
 
@@ -38,7 +38,7 @@ class SynData(Data):
             self.num_graphs = SynData.test_num_graphs
         super().__init__(get_train_str(train))
 
-    def init(self):
+    def init(self, *unused):
         self.graphs = []
         for i in range(self.num_graphs):
             n = randint(5, 20)
@@ -60,7 +60,7 @@ class AIDSData(Data):
         self.train = train
         super().__init__(get_train_str(train))
 
-    def init(self):
+    def init(self, *unused):
         self.graphs = []
         datadir = '{}/{}/{}'.format( \
             get_data_path(), self.get_folder_name(), 'train' if self.train \
@@ -88,7 +88,7 @@ class AIDS10kData(AIDSData):
 
 
 class AIDS10kNEFData(AIDS10kData):
-    def init(self):
+    def init(self, *unused):
         self.graphs = AIDS10kData(self.train).graphs
         for g in self.graphs:
             self._remove_valence(g)
@@ -115,7 +115,7 @@ class AIDS50Data(AIDSData):
 
 
 class AIDS50NEFData(AIDS10kData):
-    def init(self):
+    def init(self, *unused):
         self.graphs = []
         for g in AIDS10kData(self.train).graphs:
             if g.number_of_nodes() <= 12:

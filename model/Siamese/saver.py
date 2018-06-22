@@ -34,7 +34,8 @@ class Saver(object):
                 self.vw.add_summary(outs[0], iter)
 
     def _get_model_str(self, FLAGS):
-        return '{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format(
+        li = []
+        for f in [
             FLAGS.model, FLAGS.dataset, FLAGS.valid_percentage,
             FLAGS.node_feat_encoder, FLAGS.edge_feat_processor,
             FLAGS.dist_metric, FLAGS.dist_algo,
@@ -45,19 +46,20 @@ class Saver(object):
             self._bool_to_str(FLAGS.norm_dist, 'normDist'),
             FLAGS.sim_kernel, FLAGS.yeta,
             FLAGS.final_act, FLAGS.loss_func, FLAGS.batch_size,
-            FLAGS.learning_rate)
+            FLAGS.learning_rate]:
+            li.append(str(f))
+        return '_'.join(li)
 
     def _log_model_info(self, logdir, model_info, sess):
         model_info_table = [
             ["**key**", "**value**"],
         ]
         with open(logdir + '/model_info.txt', 'w') as f:
-            for key, value in sorted(model_info.items(),
-                                     key=lambda x: x[0]):
-                s = '{0:26} : {1}'.format(key, value)
+            for k, v in sorted(model_info.items(), key=lambda x: x[0]):
+                s = '{0:26} : {1}'.format(k, v)
                 print(s)
                 f.write(s + '\n')
-                model_info_table.append([key, '**{}**'.format(value)])
+                model_info_table.append([k, '**{}**'.format(v)])
         model_info_op = \
             tf.summary.text(
                 'model_info', tf.convert_to_tensor(model_info_table))
@@ -74,4 +76,4 @@ class Saver(object):
         if b:
             return s
         else:
-            return 'no_{}'.format(s)
+            return 'NO{}'.format(s)

@@ -236,7 +236,7 @@ def proc_filepath(filepath):
 
 def prompt(str, options=None):
     while True:
-        t = input(str)
+        t = input(str + ' ')
         if options:
             if t in options:
                 return t

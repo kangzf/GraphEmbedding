@@ -1,5 +1,4 @@
 import numpy as np
-import tensorflow as tf
 
 
 class SimilarityKernel(object):
@@ -29,6 +28,7 @@ class IdentityKernel:
     def _d_to_s(self, dist):
         return dist
 
+
 # class IdentityKernel:
 #     def dist_to_sim_np(self, dist, max_dist):
 #         return self._d_to_s(dist, max_dist)
@@ -38,7 +38,6 @@ class IdentityKernel:
 #
 #     def _d_to_s(self, dist, max_dist):
 #         return 1 - dist / max_dist
-
 
 
 class GaussianKernel(SimilarityKernel):
@@ -56,6 +55,7 @@ class GaussianKernel(SimilarityKernel):
         return np.exp(-self.yeta * np.square(dist))
 
     def dist_to_sim_tf(self, dist, *unuse):
+        import tensorflow as tf
         return tf.exp(-self.yeta * tf.square(dist))
 
 

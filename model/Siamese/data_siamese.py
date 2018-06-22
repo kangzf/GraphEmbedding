@@ -9,36 +9,44 @@ from sklearn.preprocessing import OneHotEncoder
 import scipy.sparse as sp
 import numpy as np
 import networkx as nx
-import tensorflow as tf
-
-FLAGS = tf.app.flags.FLAGS
 
 exec_turnoff_print()
 
 
 class SiameseModelData(Data):
-    def __init__(self):
-        super().__init__('{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format( \
-            FLAGS.dataset, FLAGS.valid_percentage, FLAGS.node_feat_name, \
-            FLAGS.node_feat_encoder, FLAGS.edge_feat_name, \
-            FLAGS.edge_feat_processor, FLAGS.dist_metric, FLAGS.dist_algo, \
-            FLAGS.sampler, FLAGS.sample_num, FLAGS.sampler_duplicate_removal))
+    def __init__(self, FLAGS):
+        self.dataset = FLAGS.dataset
+        self.valid_percentage = FLAGS.valid_percentage
+        self.node_feat_name = FLAGS.node_feat_name
+        self.node_feat_encoder = FLAGS.node_feat_encoder
+        self.edge_feat_name = FLAGS.edge_feat_name
+        self.edge_feat_processor = FLAGS.edge_feat_processor
+        self.sampler = FLAGS.sampler
+        self.sample_num = FLAGS.sample_num
+        self.sampler_duplicate_removal = FLAGS.sampler_duplicate_removal
+        super().__init__(self._get_name())
         print('{} train graphs; {} validation graphs; {} test graphs'.format( \
             self.train_data.num_graphs(), \
             self.valid_data.num_graphs(), \
             self.test_data.num_graphs()))
 
-    def init(self):
-        orig_train_data = load_data(FLAGS.dataset, train=True)
+    def init(self, FLAGS):
+        orig_train_data = load_data(self.dataset, train=True)
         self.n = len(orig_train_data.graphs)
         self.node_feat_encoder = self._get_node_feature_encoder( \
             orig_train_data.graphs)
         train_gs, valid_gs = self._train_val_split(orig_train_data)
-        test_gs = load_data(FLAGS.dataset, train=False).graphs
+        test_gs = load_data(self.dataset, train=False).graphs
         self._check_graphs_num(test_gs, 'test')
-        self.train_data = ModelGraphList(train_gs, self.node_feat_encoder)
-        self.valid_data = ModelGraphList(valid_gs, self.node_feat_encoder)
-        self.test_data = ModelGraphList(test_gs, self.node_feat_encoder)
+        self.train_data = ModelGraphList(
+            self.sampler, self.sample_num, self.sampler_duplicate_removal,
+            train_gs, self.node_feat_encoder)
+        self.valid_data = ModelGraphList(
+            self.sampler, self.sample_num, self.sampler_duplicate_removal,
+            valid_gs, self.node_feat_encoder)
+        self.test_data = ModelGraphList(
+            self.sampler, self.sample_num, self.sampler_duplicate_removal,
+            test_gs, self.node_feat_encoder)
         self.m = self.test_data.num_graphs()
 
         assert (len(train_gs) + len(valid_gs) == len(orig_train_data.graphs))
@@ -46,7 +54,7 @@ class SiameseModelData(Data):
     def input_dim(self):
         return self.node_feat_encoder.input_dim()
 
-    def get_feed_dict(self, placeholders, dist_calculator, tvt, \
+    def get_feed_dict(self, FLAGS, placeholders, dist_calculator, tvt, \
                       test_id, train_id):
         feed_dict = dict()
         # no pair is specified == train or val
@@ -80,12 +88,18 @@ class SiameseModelData(Data):
     def m_n(self):
         return self.m, self.n
 
+    def _get_name(self):
+        li = []
+        for k, v in sorted(self.__dict__.items(), key=lambda x: x[0]):
+            li.append('{}'.format(v))
+        return '_'.join(li)
+
     def _train_val_split(self, orig_train_data):
-        if FLAGS.valid_percentage < 0 or FLAGS.valid_percentage > 1:
-            raise RuntimeError('valid_percentage {} must be in [0, 1]'.format( \
-                FLAGS.valid_percentage))
+        if self.valid_percentage < 0 or self.valid_percentage > 1:
+            raise RuntimeError('valid_percentage {} must be in [0, 1]'.format(
+                self.valid_percentage))
         gs = orig_train_data.graphs
-        sp = int(len(gs) * (1 - FLAGS.valid_percentage))
+        sp = int(len(gs) * (1 - self.valid_percentage))
         train_graphs = gs[0:sp]
         valid_graphs = gs[sp:]
         self._check_graphs_num(train_graphs, 'train')
@@ -98,11 +112,11 @@ class SiameseModelData(Data):
                 label, len(graphs)))
 
     def _get_node_feature_encoder(self, gs):
-        if FLAGS.node_feat_encoder == 'onehot':
-            return NodeFeatureOneHotEncoder(gs)
+        if self.node_feat_encoder == 'onehot':
+            return NodeFeatureOneHotEncoder(gs, self.node_feat_name)
         else:
-            raise RuntimeError('Unknown node_feat_encoder {}'.format( \
-                FLAGS.node_feat_encoder))
+            raise RuntimeError('Unknown node_feat_encoder {}'.format(
+                self.node_feat_encoder))
 
     def _get_graph_collection(self, train_val_test):
         if train_val_test == 'train':
@@ -112,7 +126,7 @@ class SiameseModelData(Data):
         elif train_val_test == 'test':
             return self.test_data
         else:
-            raise RuntimeError('Unknown train_val_test {}'.format( \
+            raise RuntimeError('Unknown train_val_test {}'.format(
                 train_val_test))
 
     def _get_graph_pair(self, train_val_test):
@@ -134,12 +148,13 @@ class SiameseModelData(Data):
 
 
 class NodeFeatureOneHotEncoder(object):
-    def __init__(self, gs):
+    def __init__(self, gs, node_feat_name):
+        self.node_feat_name = node_feat_name
         features_set = set()
         for g in gs:
             features_set = features_set | set(self._node_feat_dic(g).values())
         self.feat_idx = {feat: idx for idx, feat in enumerate(features_set)}
-        self.oe = OneHotEncoder().fit( \
+        self.oe = OneHotEncoder().fit(
             np.array(list(self.feat_idx.values())).reshape(-1, 1))
 
     def encode(self, g):
@@ -151,17 +166,18 @@ class NodeFeatureOneHotEncoder(object):
         return self.oe.transform([[0]]).shape[1]
 
     def _node_feat_dic(self, g):
-        return nx.get_node_attributes(g, FLAGS.node_feat_name)
+        return nx.get_node_attributes(g, self.node_feat_name)
 
 
 class ModelGraphList(object):
-    def __init__(self, gs, node_feat_encoder):
+    def __init__(self, sampler, sample_num, sampler_duplicate_removal,
+                 gs, node_feat_encoder):
         self.gs = [ModelGraph(g, node_feat_encoder) for g in gs]
-        if FLAGS.sampler == 'random':
-            self.sampler = RandomSampler( \
-                self.gs, FLAGS.sample_num, FLAGS.sampler_duplicate_removal)
+        if sampler == 'random':
+            self.sampler = RandomSampler(
+                self.gs, sample_num, sampler_duplicate_removal)
         else:
-            raise RuntimeError('Unknown sampler {}'.format(FLAGS.sampler))
+            raise RuntimeError('Unknown sampler {}'.format(sampler))
 
     def num_graphs(self):
         return len(self.gs)
