@@ -19,15 +19,26 @@ class SimilarityKernel(object):
         raise NotImplementedError()
 
 
-class LinearKernel:
-    def dist_to_sim_np(self, dist, max_dist):
-        return self._d_to_s(dist, max_dist)
+class IdentityKernel:
+    def dist_to_sim_np(self, dist, *unused):
+        return self._d_to_s(dist)
 
-    def dist_to_sim_tf(self, dist, max_dist):
-        return self._d_to_s(dist, max_dist)
+    def dist_to_sim_tf(self, dist, *unused):
+        return self._d_to_s(dist)
 
-    def _d_to_s(self, dist, max_dist):
-        return 1 - dist / max_dist
+    def _d_to_s(self, dist):
+        return dist
+
+# class IdentityKernel:
+#     def dist_to_sim_np(self, dist, max_dist):
+#         return self._d_to_s(dist, max_dist)
+#
+#     def dist_to_sim_tf(self, dist, max_dist):
+#         return self._d_to_s(dist, max_dist)
+#
+#     def _d_to_s(self, dist, max_dist):
+#         return 1 - dist / max_dist
+
 
 
 class GaussianKernel(SimilarityKernel):
@@ -56,8 +67,8 @@ class BinaryKernel(SimilarityKernel):
 
 
 def create_sim_kernel(kernel_name, yeta=None):
-    if kernel_name == 'linear':
-        return LinearKernel()
+    if kernel_name == 'identity':
+        return IdentityKernel()
     elif kernel_name == 'gaussian':
         return GaussianKernel(yeta)
     else:

@@ -72,8 +72,8 @@ flags.DEFINE_string(
 """ norm_dist: True, False. """
 flags.DEFINE_boolean('norm_dist', True,
                      'Whether to normalize the distance or not.')
-""" sim_kernel: gaussian. """  # TODO: linear
-flags.DEFINE_string('sim_kernel', 'gaussian',
+""" sim_kernel: gaussian, identity. """  # TODO: linear
+flags.DEFINE_string('sim_kernel', 'identity',
                     'Name of the similarity kernel.')
 """ yeta: if norm_dist, recommend 0.2; else, try 0.001. """
 flags.DEFINE_float('yeta', 0.2, 'yeta for the gaussian kernel function.')
@@ -90,7 +90,7 @@ flags.DEFINE_float('weight_decay', 5e-4,
 # For training and validating.
 flags.DEFINE_integer('batch_size', 2, 'Number of graphs in a batch.')  # TODO: implement
 flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
-flags.DEFINE_integer('iters', 5, 'Number of iterations to train.')
+flags.DEFINE_integer('iters', 500, 'Number of iterations to train.')
 """ early_stopping: None for no early stopping. """
 flags.DEFINE_integer('early_stopping', None,
                      'Tolerance for early stopping (# of iters).')
