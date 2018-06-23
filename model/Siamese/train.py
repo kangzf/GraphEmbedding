@@ -39,6 +39,7 @@ def train_val(FLAGS, data, placeholders, dist_calculator, model, saver, sess):
                 break
 
     print('Optimization Finished!')
+    return train_costs, train_times, val_costs, val_times
 
 
 def test(FLAGS, data, placeholders, dist_calculator, model, saver, sess):
