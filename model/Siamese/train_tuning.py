@@ -111,7 +111,7 @@ def train(valid_percentage=0.4, norm_dist=True, yeta=0.2, final_act='identity',l
 
   check_flags(FLAGS)
 
-  data = SiameseModelData()
+  data = SiameseModelData(FLAGS)
 
   dist_calculator = DistCalculator(FLAGS.dataset, FLAGS.dist_metric,
                                    FLAGS.dist_algo)
@@ -145,7 +145,7 @@ def train(valid_percentage=0.4, norm_dist=True, yeta=0.2, final_act='identity',l
 
   def run_tf(train_val_test, test_id=None, train_id=None):
       feed_dict = data.get_feed_dict(
-          placeholders, dist_calculator, train_val_test, test_id, train_id)
+          FLAGS, placeholders, dist_calculator, train_val_test, test_id, train_id)
       if train_val_test == 'train':
           objs = [model.opt_op, model.loss]
           # objs = [model.pred_sim(), model.opt_op, model.loss] # TODO: figure out why it's slow
@@ -203,10 +203,11 @@ def train(valid_percentage=0.4, norm_dist=True, yeta=0.2, final_act='identity',l
 
   print('Optimization Finished!')
 
-  # Test.
-  eval = Eval(FLAGS.dataset, FLAGS.sim_kernel, FLAGS.yeta)
+  # Test
+  eval = Eval(FLAGS.dataset, FLAGS.sim_kernel, FLAGS.yeta, FLAGS.plot_results)
   m, n = data.m_n()
   test_sim_mat = np.zeros((m, n))
+  test_time_mat = np.zeros((m, n))
   run_tf('test', 0, 0) # flush the pipeline
   print('i,j,time,sim,true_sim')
   for i in range(m):
@@ -220,12 +221,11 @@ def train(valid_percentage=0.4, norm_dist=True, yeta=0.2, final_act='identity',l
           test_sim_mat[i][i] = sim_i_j
           test_time_mat[i][j] = test_time
   print('Evaluating...')
-  results = eval.eval_test(FLAGS.model, test_sim_mat, test_time_mat,
-                           FLAGS.plot_results)
+  results = eval.eval_test(FLAGS.model, test_sim_mat, test_time_mat)
 
   reset_graph()
   # print(results)
-  return best_val_loss, best_train_loss, best_val_iter, best_train_iter, results
+  return best_train_loss, best_train_iter, best_val_loss, best_val_iter, results
 
 if __name__ == '__main__':
   train()
