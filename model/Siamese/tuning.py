@@ -10,7 +10,7 @@
 #-----------------------------------------------------------------------------------------------------------------------
 import csv
 import itertools
-from train import train, reset_graph
+from train_tuning import train, reset_graph
 from os import system
 
 file_name = 'parameter_tuning_aids50.csv'
@@ -77,18 +77,18 @@ for norm_dist in norm_dist_range:
             continue
         else:
             model_result = parse_result(result)
-            csv_record([[str(x) for x in [norm_dist,yeta,final_act,learning_rate,iter,validation_ratio,
-                    best_train_loss,best_train_loss_iter,best_val_loss,best_val_loss_iter]+model_result]])
+            csv_record([[str(x) for x in [norm_dist,yeta,final_act,lr,iteration,val_ratio,
+                    best_train_loss,best_train_iter,best_val_loss,best_val_iter]+model_result]])
 
             if best_train_loss < best_result_train_loss:
                 best_result_train_loss = best_train_loss
-                result_test = [norm_dist,yeta,final_act,learning_rate,iter,validation_ratio,
-                              best_train_loss,best_train_loss_iter]+model_result
+                result_train = [norm_dist,yeta,final_act,lr,iteration,val_ratio,
+                              best_train_loss,best_train_iter]+model_result
 
             if best_val_loss < best_result_val_loss:
                 best_result_val_loss = best_val_loss
-                result_val = [norm_dist,yeta,final_act,learning_rate,iter,validation_ratio,
-                              best_val_loss,best_val_loss_iter]+model_result
+                result_val = [norm_dist,yeta,final_act,lr,iteration,val_ratio,
+                              best_val_loss,best_val_iter]+model_result
             
 print(result_train)
 print(result_val)
