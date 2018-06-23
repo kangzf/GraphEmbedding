@@ -1,5 +1,4 @@
 import numpy as np
-import tensorflow as tf
 
 
 class SimilarityKernel(object):
@@ -12,22 +11,33 @@ class SimilarityKernel(object):
     def name_suffix(self):
         return ''
 
-    def dist_to_sim(self, dist, max_dist):
+    def dist_to_sim_np(self, dist, max_dist):
         raise NotImplementedError()
 
     def dist_to_sim_tf(self, dist, max_dist):
         raise NotImplementedError()
 
 
-class LinearKernel:
-    def dist_to_sim(self, dist, max_dist):
-        return self._d_to_s(dist, max_dist)
+class IdentityKernel:
+    def dist_to_sim_np(self, dist, *unused):
+        return self._d_to_s(dist)
 
-    def dist_to_sim_tf(self, dist, max_dist):
-        return self._d_to_s(dist, max_dist)
+    def dist_to_sim_tf(self, dist, *unused):
+        return self._d_to_s(dist)
 
-    def _d_to_s(self, dist, max_dist):
-        return 1 - dist / max_dist
+    def _d_to_s(self, dist):
+        return dist
+
+
+# class IdentityKernel:
+#     def dist_to_sim_np(self, dist, max_dist):
+#         return self._d_to_s(dist, max_dist)
+#
+#     def dist_to_sim_tf(self, dist, max_dist):
+#         return self._d_to_s(dist, max_dist)
+#
+#     def _d_to_s(self, dist, max_dist):
+#         return 1 - dist / max_dist
 
 
 class GaussianKernel(SimilarityKernel):
@@ -41,10 +51,11 @@ class GaussianKernel(SimilarityKernel):
     def shortname(self):
         return 'g_{:.2e}'.format(self.yeta)
 
-    def dist_to_sim(self, dist, *unused):
+    def dist_to_sim_np(self, dist, *unused):
         return np.exp(-self.yeta * np.square(dist))
 
     def dist_to_sim_tf(self, dist, *unuse):
+        import tensorflow as tf
         return tf.exp(-self.yeta * tf.square(dist))
 
 
@@ -56,8 +67,8 @@ class BinaryKernel(SimilarityKernel):
 
 
 def create_sim_kernel(kernel_name, yeta=None):
-    if kernel_name == 'linear':
-        return LinearKernel()
+    if kernel_name == 'identity':
+        return IdentityKernel()
     elif kernel_name == 'gaussian':
         return GaussianKernel(yeta)
     else:

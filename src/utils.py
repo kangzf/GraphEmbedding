@@ -25,6 +25,12 @@ def load_data(data, train):
     elif data == 'aids10k':
         from data import AIDS10kData
         return AIDS10kData(train)
+    elif data == 'aids10knef':
+        from data import AIDS10kNEFData
+        return AIDS10kNEFData(train)
+    elif data == 'aids50nef':
+        from data import AIDS50NEFData
+        return AIDS50NEFData(train)
     else:
         raise RuntimeError('Not recognized data %s' % data)
 
@@ -230,7 +236,7 @@ def proc_filepath(filepath):
 
 def prompt(str, options=None):
     while True:
-        t = input(str)
+        t = input(str + ' ')
         if options:
             if t in options:
                 return t

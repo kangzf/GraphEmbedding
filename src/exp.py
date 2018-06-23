@@ -13,18 +13,21 @@ check_nx_version()
 import multiprocessing as mp
 from time import time
 from random import randint, uniform
-
+import numpy as np
+# Comment out for qilin. The following packages are not installed on the server.
 from pandas import read_csv
 import matplotlib.pyplot as plt
 import matplotlib
 from vis import vis
-import numpy as np
 
 BASELINE_MODELS = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
                    'hungarian', 'vj']
 TRUE_MODEL = 'beam80'
 
-""" Plotting args. """
+""" Plotting. """
+font = {'family': 'serif',
+        'size': 22}
+matplotlib.rc('font', **font)
 args1 = {'astar': {'color': 'grey'},
          'beam5': {'color': 'deeppink'},
          'beam10': {'color': 'b'},
@@ -52,9 +55,6 @@ args2 = {'astar': {'marker': '*', 'facecolors': 'none', 'edgecolors': 'grey'},
          'siamese_gcntn': {'marker': 'P', \
                            'facecolors': 'none', 'edgecolors': 'red'}
          }
-font = {'family': 'serif',
-        'size': 22}
-matplotlib.rc('font', **font)
 
 
 def exp1():
@@ -198,11 +198,12 @@ def exp3():
 def exp4():
     """ Run baselines on real datasets. Take a while. """
     dataset = prompt('Which dataset?')
-    model = prompt('Which model?')
     row_graphs = load_data(dataset, train=False)
     col_graphs = load_data(dataset, train=True)
+    model = prompt('Which model?')
+    if model != 'astar':
+        exec_turnoff_print()
     num_cpu = prompt_get_cpu()
-    exec_turnoff_print()
     real_dataset_run_helper(dataset, model, row_graphs, col_graphs, num_cpu)
 
 
@@ -212,6 +213,9 @@ def real_dataset_run_helper(dataset, model, row_graphs, col_graphs, num_cpu):
     ged_mat = np.zeros((m, n))
     time_mat = np.zeros((m, n))
     outdir = '{}/{}'.format(get_result_path(), dataset)
+    create_dir_if_not_exists(outdir + '/csv')
+    create_dir_if_not_exists(outdir + '/ged')
+    create_dir_if_not_exists(outdir + '/time')
     computer_name = prompt_get_computer_name()
     csv_fn = '{}/csv/ged_{}_{}_{}_{}_{}cpus.csv'.format( \
         outdir, dataset, model, get_ts(), computer_name, num_cpu)
@@ -346,7 +350,6 @@ def plot_apk_helper(dataset, models, rs, true_result, metric, norm, ks,
     print_ids = []
     rtn = {}
     for model in models:
-        print(model)
         aps = precision_at_ks(true_result, rs[model], norm, ks, print_ids)
         rtn[model] = {'ks': ks, 'aps': aps}
         # print('aps {}: {}'.format(model, aps))
@@ -421,7 +424,6 @@ def plot_mrr_mse_time_helper(dataset, models, rs, true_result, metric, norm,
     rtn = {}
     mrr_mse_list = []
     for model in models:
-        print(model)
         if metric == 'mrr':
             mrr_mse_time = mean_reciprocal_rank(
                 true_result, rs[model], norm, print_ids)
@@ -432,7 +434,7 @@ def plot_mrr_mse_time_helper(dataset, models, rs, true_result, metric, norm,
             mrr_mse_time = average_time(rs[model])
         else:
             raise RuntimeError('Unknown {}'.format(metric))
-        print('{} {}: {}'.format(metric, model, mrr_mse_time))
+        # print('{} {}: {}'.format(metric, model, mrr_mse_time))
         rtn[model] = mrr_mse_time
         mrr_mse_list.append(mrr_mse_time)
     rtn = {'{}{}'.format(metric, get_norm_str(norm)): rtn}
@@ -633,4 +635,4 @@ def get_sim_kernel_points(ged_mat, sim_kernel):
 
 
 if __name__ == '__main__':
-    exp6()
+    exp4()

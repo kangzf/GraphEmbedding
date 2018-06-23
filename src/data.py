@@ -1,12 +1,13 @@
 from utils import get_train_str, get_data_path, get_save_path, sorted_nicely, \
     save, load
 import networkx as nx
+import random
 from random import randint
 from glob import glob
 
 
 class Data(object):
-    def __init__(self, name_str):
+    def __init__(self, name_str, FLAGS=None):
         name = self.__class__.__name__ + '_' + name_str + self.name_suffix()
         self.name = name
         sfn = self.save_filename()
@@ -15,7 +16,7 @@ class Data(object):
             self.__dict__ = temp
             print('%s loaded from %s' % (name, sfn))
         else:
-            self.init()
+            self.init(FLAGS)
             save(sfn, self.__dict__)
             print('%s saved to %s' % (name, sfn))
 
@@ -37,7 +38,7 @@ class SynData(Data):
             self.num_graphs = SynData.test_num_graphs
         super().__init__(get_train_str(train))
 
-    def init(self):
+    def init(self, *unused):
         self.graphs = []
         for i in range(self.num_graphs):
             n = randint(5, 20)
@@ -59,7 +60,7 @@ class AIDSData(Data):
         self.train = train
         super().__init__(get_train_str(train))
 
-    def init(self):
+    def init(self, *unused):
         self.graphs = []
         datadir = '{}/{}/{}'.format( \
             get_data_path(), self.get_folder_name(), 'train' if self.train \
@@ -81,6 +82,18 @@ class AIDS10kData(AIDSData):
     def sort(self):
         return sorted_nicely
 
+    def _remove_valence(self, g):
+        for n1, n2, d in g.edges(data=True):
+            d.pop('valence', None)
+
+
+class AIDS10kNEFData(AIDS10kData):
+    def init(self, *unused):
+        self.graphs = AIDS10kData(self.train).graphs
+        for g in self.graphs:
+            self._remove_valence(g)
+        print('Processed {} graphs: valence removed'.format(len(self.graphs)))
+
 
 class AIDS10kSmallData(AIDSData):
     def get_folder_name(self):
@@ -99,3 +112,24 @@ class AIDS50Data(AIDSData):
 
     def sort(self):
         return sorted_nicely
+
+
+class AIDS50NEFData(AIDS10kData):
+    def init(self, *unused):
+        self.graphs = []
+        for g in AIDS10kData(self.train).graphs:
+            if g.number_of_nodes() <= 12:
+                self.graphs.append(g)
+        random.Random(123).shuffle(self.graphs)
+        if self.train:
+            self.graphs = self.graphs[0:50]
+        else:
+            self.graphs = self.graphs[0:10]
+        for g in self.graphs:
+            self._remove_valence(g)
+        print('Processed {} graphs: valence removed'.format(len(self.graphs)))
+
+
+if __name__ == '__main__':
+    from utils import load_data
+    data = load_data('aids50nef', True)

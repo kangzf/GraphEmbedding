@@ -1,7 +1,7 @@
 from layers_factory import create_layers, create_activation
 import sys
 from os.path import dirname, abspath
-  
+
 sys.path.insert(0, "{}/../src".format(dirname(dirname(abspath(__file__)))))
 from similarity import create_sim_kernel
 import tensorflow as tf
@@ -75,8 +75,12 @@ class GCNTN(Model):
 
         self.input_dim = input_dim
 
-        self.sim_kernel = create_sim_kernel(FLAGS.sim_kernel, FLAGS.yeta).dist_to_sim_tf
-        self.final_act = create_activation(FLAGS.final_act, self.sim_kernel)
+        self.sim_kernel = create_sim_kernel(
+            FLAGS.sim_kernel, FLAGS.yeta)
+        self.final_act = create_activation(
+            FLAGS.final_act, self.sim_kernel, use_tf=False)
+        self.final_act_np = create_activation(
+            FLAGS.final_act, self.sim_kernel, use_tf=False)
         self.loss_func = FLAGS.loss_func
         self.weight_decay = FLAGS.weight_decay
         self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)
@@ -119,36 +123,44 @@ class GCNTN(Model):
 
     def _loss(self):
         # Weight decay loss.
-        for var in self.layers[0].vars.values():
-            self.loss += self.weight_decay * tf.nn.l2_loss(var)
+        for layer in self.layers:  # TODO: why only layers[0] in gcn?
+            for var in layer.vars.values():
+                wdl = self.weight_decay * tf.nn.l2_loss(var)
+                self.loss += wdl
+        tf.summary.scalar('weight_decay_loss', wdl)
+
         if self.loss_func == 'mse':
             # L2 loss.
-            self.temp = self.pred_sim # TODO: investigate
-            self.loss += tf.nn.l2_loss( \
-                self.sim_kernel(self._get_dist()) - \
+            self.temp = self.pred_sim  # TODO: investigate
+            l2_loss = tf.nn.l2_loss( \
+                self.sim_kernel.dist_to_sim_tf(self._get_dist()) - \
                 self.pred_sim())
+            self.loss += l2_loss
+            tf.summary.scalar('l2_loss', l2_loss)
         else:
             raise RuntimeError('Unknown loss function {}'.format(self.loss_func))
+        tf.summary.scalar('total_loss', self.loss)
 
     def _rank_loss(self, gamma):
-        y_pred = self.pred_sim()                
-        pos_interact_score = y_pred[:FLAGS.batch_size_p] # need set new flag for positive sample number & assume pred is a vector
+        y_pred = self.pred_sim()
+        pos_interact_score = y_pred[
+                             :FLAGS.batch_size_p]  # need set new flag for positive sample number & assume pred is a vector
         neg_interact_score = y_pred[FLAGS.batch_size_p:]
-        diff_mat = tf.reshape(tf.tile(pos_interact_score, [FLAGS.num_negatives]), # need set new flag for negative sampling
-                     (-1, 1)) - neg_interact_score                                # assume negative sampling is conducted in this way: p+n1+n2+..+nk
+        diff_mat = tf.reshape(tf.tile(pos_interact_score, [FLAGS.num_negatives]),
+                              # need set new flag for negative sampling
+                              (-1,
+                               1)) - neg_interact_score  # assume negative sampling is conducted in this way: p+n1+n2+..+nk
         rank_loss = tf.reduce_mean(-tf.log(tf.sigmoid(gamma * diff_mat)))
         return rank_loss
 
     def pred_sim(self):
-        # return self.outputs
-        # return self.kernel_func(self.outputs)
-        # return 1 / (1 + tf.exp(self.outputs)) + 0.5
-        # return tf.sigmoid(self.outputs)
-        # return tf.nn.relu(self.outputs)
         return self.final_act(self.outputs)
 
     def pred_sim_without_act(self):
         return self.outputs
+
+    def apply_final_act_np(self, score):
+        return self.final_act_np(score)
 
     def _get_support(self, i):
         if i == 0:

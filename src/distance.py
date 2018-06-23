@@ -34,7 +34,7 @@ def ged(g1, g2, algo, debug=False, timeit=False):
     rtn = []
     if not exec(
             'cd {} && java -classpath {}/src/graph-matching-toolkit/bin algorithms.GraphMatching ./properties/properties_temp_{}.prop'.format(
-                gp, get_root_path(), append_str, timeout=1000)):
+                gp, get_root_path(), append_str)):
         rtn.append(-1)
     else:
         d, t, lcnt, g1size, g2size, result_file = get_result(gp, algo, append_str)
