@@ -41,7 +41,7 @@ File = open(file_name, 'w')
 with File:
     writer = csv.writer(File)
     writer.writerows([header])
-
+    
 def parse_result(result):
     mrr_norm = result['mrr_norm']['siamese_gcntn']
     mrr_nonorm = result['mrr_nonorm']['siamese_gcntn']
