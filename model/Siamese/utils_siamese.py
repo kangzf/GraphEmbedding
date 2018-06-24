@@ -8,3 +8,4 @@ def check_flags(FLAGS):
 
 def print_msec(sec):
     return '{:.2f}msec'.format(sec * 1000)
+
