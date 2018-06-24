@@ -37,7 +37,8 @@ args1 = {'astar': {'color': 'grey'},
          'hungarian': {'color': 'deepskyblue'},
          'vj': {'color': 'darkcyan'},
          'graph2vec': {'color': 'darkcyan'},
-         'siamese_gcntn': {'color': 'red'}}
+         'siamese_gcntn': {'color': 'red'},
+         'transductive': {'color': 'red'}}
 args2 = {'astar': {'marker': '*', 'facecolors': 'none', 'edgecolors': 'grey'},
          'beam5': {'marker': '|', 'facecolors': 'deeppink'},
          'beam10': {'marker': '_', 'facecolors': 'b'},
@@ -52,8 +53,10 @@ args2 = {'astar': {'marker': '*', 'facecolors': 'none', 'edgecolors': 'grey'},
                 'edgecolors': 'darkcyan'},
          'graph2vec': {'marker': 'h', 'facecolors': 'none',
                        'edgecolors': 'darkcyan'},
-         'siamese_gcntn': {'marker': 'P', \
-                           'facecolors': 'none', 'edgecolors': 'red'}
+         'siamese_gcntn': {'marker': 'P',
+                           'facecolors': 'none', 'edgecolors': 'red'},
+         'transductive': {'marker': 'P',
+                          'facecolors': 'none', 'edgecolors': 'red'}
          }
 
 
@@ -172,7 +175,7 @@ def exp3():
         if model == 'astar':
             continue
         plt.scatter(data['g2_node'], data['time_' + model], s=150, label=model,
-                    **args2[model])
+                    **get_plotting_arg(args2, model))
     plt.xlabel('# nodes of graph 2')
     plt.ylabel('time (sec)')
     plt.legend(loc='best')
@@ -291,8 +294,8 @@ def plot_ged_time_helper(dataset, models, metric, rs):
         mat = rs[model].mat(metric.name, norm=True)
         print('plotting for {}'.format(model))
         ys = np.mean(mat, 1)[so]
-        plt.plot(xs, ys, **args1[model])
-        plt.scatter(xs, ys, s=200, label=model, **args2[model])
+        plt.plot(xs, ys, **get_plotting_arg(args1, model))
+        plt.scatter(xs, ys, s=200, label=model, **get_plotting_arg(args2, model))
     plt.xlabel('query graph size')
     ax = plt.gca()
     ax.set_xticks(xs)
@@ -305,6 +308,12 @@ def plot_ged_time_helper(dataset, models, metric, rs):
         dataset, metric, metric, dataset, '_'.join(models))
     plt.savefig(sp)
     print('Saved to {}'.format(sp))
+
+
+def get_plotting_arg(args, model):
+    for k, v in args.items():
+        if k in model:
+            return v
 
 
 def get_test_graph_sizes(dataset):
@@ -348,22 +357,24 @@ def plot_apk(dataset, models, rs, true_result, metric, norms, plot_results=True)
 def plot_apk_helper(dataset, models, rs, true_result, metric, norm, ks,
                     logscale, plot_results):
     print_ids = []
-    rtn = {}
+    numbers = {}
     for model in models:
         aps = precision_at_ks(true_result, rs[model], norm, ks, print_ids)
-        rtn[model] = {'ks': ks, 'aps': aps}
+        numbers[model] = {'ks': ks, 'aps': aps}
         # print('aps {}: {}'.format(model, aps))
-    rtn = {'apk{}'.format(get_norm_str(norm)): rtn}
+    rtn = {'apk{}'.format(get_norm_str(norm)): numbers}
     if not plot_results:
         return rtn
     plt.figure(figsize=(16, 10))
     for model in models:
+        ks = numbers[model]['ks']
+        aps = numbers[model]['aps']
         if logscale:
             pltfunc = plt.semilogx
         else:
             pltfunc = plt.plot
-        pltfunc(ks, aps, **args1[model])
-        plt.scatter(ks, aps, s=200, label=model, **args2[model])
+        pltfunc(ks, aps, **get_plotting_arg(args1, model))
+        plt.scatter(ks, aps, s=200, label=model, **get_plotting_arg(args2, model))
     plt.xlabel('k')
     # ax = plt.gca()
     # ax.set_xticks(ks)
@@ -445,7 +456,7 @@ def plot_mrr_mse_time_helper(dataset, models, rs, true_result, metric, norm,
     width = 0.35  # the width of the bars
     bars = plt.bar(ind, mrr_mse_list, width)
     for i, bar in enumerate(bars):
-        bar.set_color(args1[models[i]]['color'])
+        bar.set_color(get_plotting_arg(args1, models[i])['color'])
     autolabel(bars)
     plt.xlabel('model')
     plt.xticks(ind, models)

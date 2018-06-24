@@ -189,7 +189,7 @@ class DistanceModelResult(Result):
         return np.load(file)
 
     def _choose_result_file(self, files):
-        return files[0] # TODO: smart choice and cross-checking
+        return files[0]  # TODO: smart choice and cross-checking
 
     def _select_dist_mat(self, norm):
         return self.dist_norm_mat_ if norm else self.dist_mat_
@@ -326,7 +326,7 @@ class SiameseModelResult(SimilarityBasedModelResult):
         self.sort_id_mat_ = self.sort_id_mat()
 
     def time(self, qid, gid):
-        return None
+        return self.time_mat_[qid][gid]
 
     def time_mat(self):
         return self.time_mat_
@@ -336,6 +336,31 @@ class SiameseModelResult(SimilarityBasedModelResult):
             return self.sim_mat_
         elif metric == 'time':
             return self.time_mat_
+        else:
+            raise RuntimeError('Unknown metric {} for model {}'.format( \
+                metric, self.model_))
+
+    def _load_sim_mat(self, model_info):
+        raise NotImplementedError()
+
+    def _load_time_mat(self, model_info):
+        raise NotImplementedError()
+
+
+class TransductiveResult(SimilarityBasedModelResult):
+    def __init__(self, dataset, model, \
+                 sim_mat=None, model_info=None):
+        self.model_ = model
+        self.dataset = dataset
+        if sim_mat is not None:
+            self.sim_mat_ = sim_mat
+        else:
+            self.sim_mat_ = self._load_sim_mat(model_info)
+        self.sort_id_mat_ = self.sort_id_mat()
+
+    def mat(self, metric, *unused):
+        if metric == 'sim':
+            return self.sim_mat_
         else:
             raise RuntimeError('Unknown metric {} for model {}'.format( \
                 metric, self.model_))
@@ -364,6 +389,8 @@ def load_result(dataset, model, sim=None, sim_mat=None, \
         return Graph2VecResult(dataset, model, sim)
     elif 'siamese' in model:
         return SiameseModelResult(dataset, model, sim_mat, time_mat, model_info)
+    elif 'transductive' in model:
+        return TransductiveResult(dataset, model, sim_mat, model_info)
     else:
         raise RuntimeError('Unknown model {}'.format(model))
 

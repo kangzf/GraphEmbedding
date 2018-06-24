@@ -1,7 +1,7 @@
 import sys
 from os.path import dirname, abspath
 
-sys.path.insert(0, "{}/../src".format(dirname(dirname(abspath(__file__)))))
+sys.path.insert(0, '{}/../src'.format(dirname(dirname(abspath(__file__)))))
 from data import Data
 from utils import load_data, exec_turnoff_print
 from samplers import RandomSampler
@@ -30,7 +30,7 @@ class SiameseModelData(Data):
             self.valid_data.num_graphs(), \
             self.test_data.num_graphs()))
 
-    def init(self, FLAGS):
+    def init(self):
         orig_train_data = load_data(self.dataset, train=True)
         self.n = len(orig_train_data.graphs)
         self.node_feat_encoder = self._get_node_feature_encoder( \

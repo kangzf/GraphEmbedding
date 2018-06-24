@@ -1,5 +1,5 @@
 from utils_siamese import print_msec
-from eval_siamese import Eval
+from eval import Eval
 from time import time
 import numpy as np
 
