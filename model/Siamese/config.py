@@ -78,11 +78,11 @@ flags.DEFINE_integer('iters', 500, 'Number of iterations to train.')
 """ early_stopping: None for no early stopping. """
 flags.DEFINE_integer('early_stopping', None,
                      'Tolerance for early stopping (# of iters).')
-flags.DEFINE_boolean('log', True,
+flags.DEFINE_boolean('log', False,
                      'Whether to log the results via Tensorboard, etc. or not.')
 
 # For testing.
-flags.DEFINE_boolean('plot_results', True,
+flags.DEFINE_boolean('plot_results', False,
                      'Whether to plot the results or not.')
 
 placeholders = {

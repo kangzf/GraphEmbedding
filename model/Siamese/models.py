@@ -78,7 +78,7 @@ class GCNTN(Model):
         self.sim_kernel = create_sim_kernel(
             FLAGS.sim_kernel, FLAGS.yeta)
         self.final_act = create_activation(
-            FLAGS.final_act, self.sim_kernel, use_tf=False)
+            FLAGS.final_act, self.sim_kernel, use_tf=True)
         self.final_act_np = create_activation(
             FLAGS.final_act, self.sim_kernel, use_tf=False)
         self.loss_func = FLAGS.loss_func
