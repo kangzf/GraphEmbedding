@@ -62,17 +62,17 @@ def tune(FLAGS, placeholders):
                   'validation_ratio: {}'.format(val_ratio))
             i += 1
             flags = tf.app.flags
-            # # reset_flag(FLAGS, flags.DEFINE_string, 'dataset', dataset)
-            # reset_flag(FLAGS, flags.DEFINE_float, 'valid_percentage',
-            #            val_ratio)
-            # reset_flag(FLAGS, flags.DEFINE_bool, 'norm_dist', norm_dist)
-            # reset_flag(FLAGS, flags.DEFINE_float, 'yeta', yeta)
-            # reset_flag(FLAGS, flags.DEFINE_string, 'final_act', final_act)
-            # reset_flag(FLAGS, flags.DEFINE_float, 'learning_rate', lr)
-            # reset_flag(FLAGS, flags.DEFINE_integer, 'iters', iteration)
-            # reset_flag(FLAGS, flags.DEFINE_bool, 'log', False)
-            # reset_flag(FLAGS, flags.DEFINE_bool, 'plot_results', False)
-            # FLAGS = tf.app.flags.FLAGS
+            reset_flag(FLAGS, flags.DEFINE_string, 'dataset', dataset)
+            reset_flag(FLAGS, flags.DEFINE_float, 'valid_percentage',
+                       val_ratio)
+            reset_flag(FLAGS, flags.DEFINE_bool, 'norm_dist', norm_dist)
+            reset_flag(FLAGS, flags.DEFINE_float, 'yeta', yeta)
+            reset_flag(FLAGS, flags.DEFINE_string, 'final_act', final_act)
+            reset_flag(FLAGS, flags.DEFINE_float, 'learning_rate', lr)
+            reset_flag(FLAGS, flags.DEFINE_integer, 'iters', iteration)
+            reset_flag(FLAGS, flags.DEFINE_bool, 'log', False)
+            reset_flag(FLAGS, flags.DEFINE_bool, 'plot_results', False)
+            FLAGS = tf.app.flags.FLAGS
             train_costs, train_times, val_costs, val_times, results \
                 = main(FLAGS, placeholders)
             best_train_loss = np.min(train_costs)
