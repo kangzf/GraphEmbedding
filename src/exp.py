@@ -18,6 +18,8 @@ import numpy as np
 from pandas import read_csv
 import matplotlib.pyplot as plt
 import matplotlib
+
+matplotlib.rc('font', **{'family': 'serif', 'size': 22})
 from vis import vis
 
 BASELINE_MODELS = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
@@ -25,9 +27,6 @@ BASELINE_MODELS = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
 TRUE_MODEL = 'beam80'
 
 """ Plotting. """
-font = {'family': 'serif',
-        'size': 22}
-matplotlib.rc('font', **font)
 args1 = {'astar': {'color': 'grey'},
          'beam5': {'color': 'deeppink'},
          'beam10': {'color': 'b'},
