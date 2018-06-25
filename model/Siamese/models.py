@@ -1,8 +1,4 @@
 from layers_factory import create_layers, create_activation
-import sys
-from os.path import dirname, abspath
-
-sys.path.insert(0, "{}/../src".format(dirname(dirname(abspath(__file__)))))
 from similarity import create_sim_kernel
 import tensorflow as tf
 

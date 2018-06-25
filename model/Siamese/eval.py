@@ -1,7 +1,3 @@
-import sys
-from os.path import dirname, abspath
-
-sys.path.insert(0, '{}/../src'.format(dirname(dirname(abspath(__file__)))))
 from exp import BASELINE_MODELS, TRUE_MODEL, plot_apk, plot_mrr_mse_time
 from results import load_results_as_dict, load_result
 

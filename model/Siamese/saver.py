@@ -1,9 +1,5 @@
-import sys
-from os.path import dirname, abspath
-
-cur_folder = dirname(abspath(__file__))
-sys.path.insert(0, "{}/../src".format(cur_folder))
 from utils import get_ts, create_dir_if_not_exists
+from utils_siamese import get_siamese_dir
 import tensorflow as tf
 
 
@@ -12,7 +8,8 @@ class Saver(object):
         self.log = FLAGS.log
         if self.log:
             model_str = self._get_model_str(FLAGS)
-            logdir = '{}/logs/{}_{}'.format(cur_folder, model_str, get_ts())
+            logdir = '{}/logs/{}_{}'.format(
+                get_siamese_dir(), model_str, get_ts())
             create_dir_if_not_exists(logdir)
             self.tw = tf.summary.FileWriter(logdir + '/train', sess.graph)
             self.vw = tf.summary.FileWriter(logdir + '/val', sess.graph)

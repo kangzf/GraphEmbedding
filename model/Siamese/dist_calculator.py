@@ -1,7 +1,3 @@
-import sys
-from os.path import dirname, abspath
-
-sys.path.insert(0, '{}/../src'.format(dirname(dirname(abspath(__file__)))))
 from utils import get_save_path, save, load
 from distance import ged, normalized_dist
 from collections import OrderedDict

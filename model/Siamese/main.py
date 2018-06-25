@@ -1,7 +1,7 @@
 from __future__ import division
 from __future__ import print_function
 
-from config import FLAGS, placeholders
+import config
 from train import train_val, test
 from utils_siamese import check_flags
 from data_siamese import SiameseModelData
@@ -34,4 +34,4 @@ def main(FLAGS, placeholders):
 
 
 if __name__ == '__main__':
-    main(FLAGS, placeholders)
+    main(config.FLAGS, config.placeholders)

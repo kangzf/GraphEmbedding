@@ -1,7 +1,3 @@
-import sys
-from os.path import dirname, abspath
-
-sys.path.insert(0, '{}/../src'.format(dirname(dirname(abspath(__file__)))))
 from data import Data
 from utils import load_data, exec_turnoff_print
 from samplers import RandomSampler
@@ -33,10 +29,10 @@ class SiameseModelData(Data):
     def init(self):
         orig_train_data = load_data(self.dataset, train=True)
         self.n = len(orig_train_data.graphs)
-        self.node_feat_encoder = self._get_node_feature_encoder( \
-            orig_train_data.graphs)
         train_gs, valid_gs = self._train_val_split(orig_train_data)
         test_gs = load_data(self.dataset, train=False).graphs
+        self.node_feat_encoder = self._get_node_feature_encoder( \
+            orig_train_data.graphs + test_gs)
         self._check_graphs_num(test_gs, 'test')
         self.train_data = ModelGraphList(
             self.sampler, self.sample_num, self.sampler_duplicate_removal,
@@ -153,13 +149,13 @@ class NodeFeatureOneHotEncoder(object):
         features_set = set()
         for g in gs:
             features_set = features_set | set(self._node_feat_dic(g).values())
-        self.feat_idx = {feat: idx for idx, feat in enumerate(features_set)}
+        self.feat_idx_dic = {feat: idx for idx, feat in enumerate(features_set)}
         self.oe = OneHotEncoder().fit(
-            np.array(list(self.feat_idx.values())).reshape(-1, 1))
+            np.array(list(self.feat_idx_dic.values())).reshape(-1, 1))
 
     def encode(self, g):
         node_feat_dic = self._node_feat_dic(g)
-        temp = [self.feat_idx[node_feat_dic[n]] for n in g.nodes()]
+        temp = [self.feat_idx_dic[node_feat_dic[n]] for n in g.nodes()]
         return self.oe.transform(np.array(temp).reshape(-1, 1)).toarray()
 
     def input_dim(self):

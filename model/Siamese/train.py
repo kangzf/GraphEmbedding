@@ -34,7 +34,8 @@ def train_val(FLAGS, data, placeholders, dist_calculator, model, saver, sess):
 
         if FLAGS.early_stopping:
             if iter > FLAGS.early_stopping and \
-                    val_costs[-1] > np.mean(val_costs[-(FLAGS.early_stopping + 1):-1]):
+                    val_costs[-1] > \
+                    np.mean(val_costs[-(FLAGS.early_stopping + 1):-1]):
                 print('Early stopping...')
                 break
 

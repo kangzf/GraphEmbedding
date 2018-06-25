@@ -5,8 +5,8 @@ flags = tf.app.flags
 FLAGS = tf.app.flags.FLAGS
 
 # For data preprocessing.
-""" dataset: aids50, aids10k, """
-flags.DEFINE_string('dataset', 'aids50', 'Dataset string.')
+""" dataset: aids50, aids50nef, aids10k, aids10knef. """
+flags.DEFINE_string('dataset', 'aids50nef', 'Dataset string.')
 """ valid_percentage: (0, 1). """
 flags.DEFINE_float('valid_percentage', 0.4,
                    '(# validation graphs) / (# validation + # training graphs.')

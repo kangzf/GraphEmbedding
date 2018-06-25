@@ -1,7 +1,3 @@
-import sys
-from os.path import dirname, abspath
-
-sys.path.insert(0, '{}/../src'.format(dirname(dirname(abspath(__file__)))))
 from utils import load_data, exec_turnoff_print
 from similarity import create_sim_kernel
 from dist_calculator import DistCalculator

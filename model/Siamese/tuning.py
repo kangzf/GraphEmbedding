@@ -8,6 +8,8 @@
 # iteration          500-2000       4 diff iter
 # validation ratio   0.2-0.4        2 diff ratio   
 # ------------------------------------------------------------------------------
+from utils_siamese import get_siamese_dir
+from utils import get_ts
 from main import main
 from config import FLAGS, placeholders
 import numpy as np
@@ -15,7 +17,9 @@ import tensorflow as tf
 import csv
 import itertools
 
-file_name = 'parameter_tuning_aids50.csv'
+dataset = 'aids50nef'
+file_name = '{}/logs/parameter_tuning_{}_{}.csv'.format(
+    get_siamese_dir(), dataset, get_ts())
 
 header = ['norm_dist', 'yeta', 'final_act', 'learning_rate', 'iter',
           'validation_ratio',
@@ -57,57 +61,48 @@ def tune(FLAGS, placeholders):
                   'iteration: {}'.format(iteration),
                   'validation_ratio: {}'.format(val_ratio))
             i += 1
-            try:
-                flags = tf.app.flags
-                reset_flag(FLAGS, flags.DEFINE_float, 'valid_percentage',
-                           val_ratio)
-                reset_flag(FLAGS, flags.DEFINE_bool, 'norm_dist', norm_dist)
-                reset_flag(FLAGS, flags.DEFINE_float, 'yeta', yeta)
-                reset_flag(FLAGS, flags.DEFINE_string, 'final_act', final_act)
-                reset_flag(FLAGS, flags.DEFINE_float, 'learning_rate', lr)
-                reset_flag(FLAGS, flags.DEFINE_bool, 'log', False)
-                reset_flag(FLAGS, flags.DEFINE_bool, 'plot_results', False)
-                reset_flag(FLAGS, flags.DEFINE_integer, 'iters', 14)
-                FLAGS = tf.app.flags.FLAGS
-                train_costs, train_times, val_costs, val_times, results \
-                    = main(FLAGS, placeholders)
-                best_train_loss = np.min(train_costs)
-                best_train_iter = np.argmin(train_costs)
-                best_val_loss = np.min(val_costs)
-                best_val_iter = np.argmin(val_costs)
-                print('best_train_loss: {}'.format(best_train_loss),
-                      'best_val_loss: {}'.format(best_val_loss),
-                      'best_train_iter: {}'.format(best_train_iter),
-                      'best_val_iter: {}'.format(best_val_iter))
-            except Exception as e:
-                print('#####', str(e))
-                csv_record([['Exception:']], f)
-                csv_record(
-                    [[str(x) for x in
-                      [norm_dist, yeta, final_act, lr, iteration,
-                       val_ratio]]], f)
-                reset_graph()
-                continue
-            else:
-                model_results = parse_results(results)
-                csv_record([[str(x) for x in
-                             [norm_dist, yeta, final_act, lr, iteration,
-                              val_ratio,
-                              best_train_loss, best_train_iter, best_val_loss,
-                              best_val_iter] + model_results]], f)
+            flags = tf.app.flags
+            # # reset_flag(FLAGS, flags.DEFINE_string, 'dataset', dataset)
+            # reset_flag(FLAGS, flags.DEFINE_float, 'valid_percentage',
+            #            val_ratio)
+            # reset_flag(FLAGS, flags.DEFINE_bool, 'norm_dist', norm_dist)
+            # reset_flag(FLAGS, flags.DEFINE_float, 'yeta', yeta)
+            # reset_flag(FLAGS, flags.DEFINE_string, 'final_act', final_act)
+            # reset_flag(FLAGS, flags.DEFINE_float, 'learning_rate', lr)
+            # reset_flag(FLAGS, flags.DEFINE_integer, 'iters', iteration)
+            # reset_flag(FLAGS, flags.DEFINE_bool, 'log', False)
+            # reset_flag(FLAGS, flags.DEFINE_bool, 'plot_results', False)
+            # FLAGS = tf.app.flags.FLAGS
+            train_costs, train_times, val_costs, val_times, results \
+                = main(FLAGS, placeholders)
+            best_train_loss = np.min(train_costs)
+            best_train_iter = np.argmin(train_costs)
+            best_val_loss = np.min(val_costs)
+            best_val_iter = np.argmin(val_costs)
+            print('best_train_loss: {}'.format(best_train_loss),
+                  'best_val_loss: {}'.format(best_val_loss),
+                  'best_train_iter: {}'.format(best_train_iter),
+                  'best_val_iter: {}'.format(best_val_iter))
 
-                if best_train_loss < best_results_train_loss:
-                    best_results_train_loss = best_train_loss
-                    results_train = [norm_dist, yeta, final_act, lr,
-                                    iteration, val_ratio,
-                                    best_train_loss, best_train_iter] + \
-                                   model_results
+            model_results = parse_results(results)
+            csv_record([[str(x) for x in
+                         [norm_dist, yeta, final_act, lr, iteration,
+                          val_ratio,
+                          best_train_loss, best_train_iter, best_val_loss,
+                          best_val_iter] + model_results]], f)
 
-                if best_val_loss < best_results_val_loss:
-                    best_results_val_loss = best_val_loss
-                    results_val = [norm_dist, yeta, final_act, lr,
-                                  iteration, val_ratio,
-                                  best_val_loss, best_val_iter] + model_results
+            if best_train_loss < best_results_train_loss:
+                best_results_train_loss = best_train_loss
+                results_train = [norm_dist, yeta, final_act, lr,
+                                 iteration, val_ratio,
+                                 best_train_loss, best_train_iter] + \
+                                model_results
+
+            if best_val_loss < best_results_val_loss:
+                best_results_val_loss = best_val_loss
+                results_val = [norm_dist, yeta, final_act, lr,
+                               iteration, val_ratio,
+                               best_val_loss, best_val_iter] + model_results
 
     print(results_train)
     print(results_val)
@@ -157,7 +152,7 @@ def parse_results(results):
     apk_norm = results['apk_norm']['siamese_gcntn']['aps'][:10]
     apk_nonorm = results['apk_nonorm']['siamese_gcntn']['aps'][:10]
     model_results = list(apk_norm) + list(apk_nonorm) + \
-                   [mrr_norm, mrr_nonorm, mse_norm, mse_nonorm]
+                    [mrr_norm, mrr_nonorm, mse_norm, mse_nonorm]
     return model_results
 
 
