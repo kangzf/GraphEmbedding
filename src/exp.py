@@ -581,7 +581,7 @@ def get_graph_stats_text(g):
 
 def exp9():
     """ Check similarity kernel. """
-    dataset = 'aids50'
+    dataset = 'aids50nef'
     model = 'beam80'
     sim_kernel_name = 'gaussian'
     norms = [True, False]
@@ -616,7 +616,7 @@ def plot_sim_kernel(dataset, result, sim_kernels, norm):
         for i in range(m):
             for j in range(n):
                 d = ged_mat[i][j]
-                plt.scatter(ged_mat[i][j], sim_kernel.dist_to_sim(d), s=100)
+                plt.scatter(ged_mat[i][j], sim_kernel.dist_to_sim_np(d), s=100)
         # Plot the function.
         xs, ys = get_sim_kernel_points(ged_mat, sim_kernel)
         plt.plot(xs, ys, label=sim_kernel.name())
@@ -640,9 +640,9 @@ def get_sim_kernel_points(ged_mat, sim_kernel):
     while i < np.amax(ged_mat) * 1.05:
         xs.append(i)
         i += 0.1
-    ys = [sim_kernel.dist_to_sim(x) for x in xs]
+    ys = [sim_kernel.dist_to_sim_np(x) for x in xs]
     return xs, ys
 
 
 if __name__ == '__main__':
-    exp4()
+    exp9()

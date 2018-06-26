@@ -1,3 +1,4 @@
+from utils import format_float
 import numpy as np
 
 
@@ -46,7 +47,7 @@ class GaussianKernel(SimilarityKernel):
         pass
 
     def name(self):
-        return 'Gaussian_yeta={:.2f}'.format(self.yeta)
+        return 'Gaussian_yeta={}'.format(format_float(self.yeta))
 
     def shortname(self):
         return 'g_{:.2e}'.format(self.yeta)

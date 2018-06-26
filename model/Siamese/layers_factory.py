@@ -80,13 +80,14 @@ def create_activation(act, sim_kernel=None, use_tf=True):
     elif act == 'tanh':
         return tf.tanh if use_tf else np.tanh
     elif act == 'sim_kernel':
-        return sim_kernel.dist_to_sim_tf if use_tf else sim_kernel.dist_to_sim_np
+        return sim_kernel.dist_to_sim_tf if use_tf else \
+            sim_kernel.dist_to_sim_np
     else:
         raise RuntimeError('Unknown activation function {}'.format(act))
 
 
 def relu_np(x):
-    return np.maximum(x, 0, x)
+    return np.maximum(x, 0)
 
 
 def identity_np(x):

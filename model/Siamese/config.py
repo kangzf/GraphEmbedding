@@ -55,14 +55,16 @@ flags.DEFINE_string(
     'dropout=True,bias=True', '')
 """ dist_norm: True, False. """
 flags.DEFINE_boolean('dist_norm', True,
-                     'Whether to normalize the distance or not.')
+                     'Whether to normalize the distance or not '
+                     'when choosing the ground truth distance.')
 """ sim_kernel: gaussian, identity. """  # TODO: linear
 flags.DEFINE_string('sim_kernel', 'identity',
                     'Name of the similarity kernel.')
-""" yeta: if norm_dist, recommend 0.2; else, try 0.001. """
-flags.DEFINE_float('yeta', 0.2, 'yeta for the gaussian kernel function.')
+""" yeta: if norm_dist, recommend 0.3 for nef, 0.2 regular;
+ else 0.4; else, try 0.001. """
+flags.DEFINE_float('yeta', 0.3, 'yeta for the gaussian kernel function.')
 """ final_act: identity, relu, sigmoid, tanh, sim_kernel (same as sim_kernel). """
-flags.DEFINE_string('final_act', 'identity',
+flags.DEFINE_string('final_act', 'relu',
                     'The final activation function applied to the NTN output.')
 """ loss_func: mse. """  # TODO: sigmoid pairwise, etc.
 flags.DEFINE_string('loss_func', 'mse', 'Loss function(s) to use.')
@@ -79,7 +81,7 @@ flags.DEFINE_integer('iters', 500, 'Number of iterations to train.')
 """ early_stopping: None for no early stopping. """
 flags.DEFINE_integer('early_stopping', None,
                      'Tolerance for early stopping (# of iters).')
-flags.DEFINE_boolean('log', True,
+flags.DEFINE_boolean('log', False,
                      'Whether to log the results via Tensorboard, etc. or not.')
 
 # For testing.

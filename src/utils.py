@@ -283,9 +283,9 @@ def check_nx_version():
 
 
 def format_float(f):
-    if f < 1e-5:
+    if f < 1e-2:
         return '{:.2e}'.format(f)
     elif f < 1:
-        return '{:.4f}'.format(f)
+        return '{:.2f}'.format(f)
     else:
         return '{:.2f}'.format(f)

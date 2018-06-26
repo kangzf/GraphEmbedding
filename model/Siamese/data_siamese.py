@@ -192,7 +192,7 @@ class ModelGraph(object):
     def __init__(self, nxgraph, node_feat_encoder):
         self.nxgraph = nxgraph
         encoded_features = node_feat_encoder.encode(nxgraph)
-        self.node_features = self._preprocess_features( \
+        self.node_features = self._preprocess_features(
             sp.csr_matrix(encoded_features))
         self.supports = self._preprocess_adj(nx.adjacency_matrix(nxgraph))
 
