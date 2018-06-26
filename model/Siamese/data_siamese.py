@@ -67,12 +67,10 @@ class SiameseModelData(Data):
             # No need to feed the labels.
         feed_dict[placeholders['features_1']] = g1.get_node_features()
         feed_dict[placeholders['features_2']] = g2.get_node_features()
-        num_support = 1
-        # for i in range(num_support):
-        feed_dict[placeholders['support_1']] = g1.get_supports()  # TODO: turn into batching
-        feed_dict[placeholders['support_2']] = g2.get_supports()
-        feed_dict[placeholders['num_supports']] = len(g1.get_supports())
-        assert (len(g1.get_supports()) == len(g2.get_supports()))
+        for i in range(1):
+            feed_dict[placeholders['support_1'][i]] = g1.get_supports()[i]  # TODO: turn into batching
+            feed_dict[placeholders['support_2'][i]] = g2.get_supports()[i]
+        assert (len(g1.get_supports()) == len(g2.get_supports()) == 1)
         feed_dict[placeholders['num_features_1_nonzero']] = \
             g1.get_node_features()[1].shape  # TODO: refactor
         feed_dict[placeholders['num_features_2_nonzero']] = \
@@ -194,7 +192,8 @@ class ModelGraph(object):
         encoded_features = node_feat_encoder.encode(nxgraph)
         self.node_features = self._preprocess_features(
             sp.csr_matrix(encoded_features))
-        self.supports = self._preprocess_adj(nx.adjacency_matrix(nxgraph))
+        # Only one support, i.e. Laplacian.
+        self.supports = [self._preprocess_adj(nx.adjacency_matrix(nxgraph))]
 
     def get_nxgraph(self):
         return self.nxgraph

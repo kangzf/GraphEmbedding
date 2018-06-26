@@ -1,6 +1,7 @@
 from inits import *
 import tensorflow as tf
 
+
 class Layer(object):
     """Base layer class. Defines basic API for all layer objects.
     Implementation inspired by keras (http://keras.io).
@@ -132,7 +133,7 @@ class GraphConvolution(Layer):
 
     def _call(self, inputs):
         x = inputs[0]
-        self.support = [inputs[1]]  # TODO:fix
+        self.support = inputs[1]  # TODO:fix
         num_features_nonzero = inputs[2]
 
         # dropout
@@ -255,6 +256,7 @@ class NTN(Layer):
 # global unique layer ID dictionary for layer name assignment
 _LAYER_UIDS = {}
 _LAYERS = []
+
 
 def get_layer_name(layer):
     """Helper function, assigns layer names and unique layer IDs."""

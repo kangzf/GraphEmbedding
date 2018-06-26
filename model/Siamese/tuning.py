@@ -44,6 +44,8 @@ val_ratio_range = [0.2, 0.4]
 
 
 def tune(FLAGS, placeholders):
+    print('Remember to clean up "../../save/SiameseModelData*" '
+          'if something does not work!')
     f = setup_file()
     best_results_train_loss, best_results_val_loss = float('Inf'), float('Inf')
     results_train = []
@@ -65,6 +67,27 @@ def tune(FLAGS, placeholders):
             reset_flag(FLAGS, flags.DEFINE_string, 'dataset', dataset)
             reset_flag(FLAGS, flags.DEFINE_float, 'valid_percentage',
                        val_ratio)
+            reset_flag(FLAGS, flags.DEFINE_string, 'model', 'siamese_gcntn')
+            reset_flag(FLAGS, flags.DEFINE_integer, 'num_layers', 4)
+            reset_flag(
+                FLAGS, flags.DEFINE_string,
+                'layer_0',
+                'GraphConvolution:output_dim=32,act=relu,'
+                'dropout=True,bias=True,sparse_inputs=True')
+            reset_flag(
+                FLAGS, flags.DEFINE_string,
+                'layer_1',
+                'GraphConvolution:input_dim=32,output_dim=16,act=identity,'
+                'dropout=True,bias=True,sparse_inputs=False')
+            reset_flag(
+                FLAGS, flags.DEFINE_string,
+                'layer_2',
+                'Average')
+            reset_flag(
+                FLAGS, flags.DEFINE_string,
+                'layer_3',
+                'NTN:input_dim=16,feature_map_dim=10,inneract=relu,'
+                'dropout=True,bias=True')
             reset_flag(FLAGS, flags.DEFINE_bool, 'dist_norm', dist_norm)
             reset_flag(FLAGS, flags.DEFINE_float, 'yeta', yeta)
             reset_flag(FLAGS, flags.DEFINE_string, 'final_act', final_act)

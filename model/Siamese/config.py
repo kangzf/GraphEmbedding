@@ -2,7 +2,6 @@ import tensorflow as tf
 
 # Hyper-parameters.
 flags = tf.app.flags
-FLAGS = tf.app.flags.FLAGS
 
 # For data preprocessing.
 """ dataset: aids50, aids50nef, aids10k, aids10knef. """
@@ -35,8 +34,13 @@ flags.DEFINE_boolean('sampler_duplicate_removal', False,
                      'Whether to remove duplicate for sampler or not.')
 
 # For model.
-""" model: gcntn. """
+""" model: siamese_gcntn, siamese_tranductive_ntn. """
 flags.DEFINE_string('model', 'siamese_gcntn', 'Model string.')
+# flags.DEFINE_integer('num_layers', 1, 'Number of layers.')
+# flags.DEFINE_string(
+#     'layer_0',
+#     'NTN:input_dim=16,feature_map_dim=10,inneract=relu,'
+#     'dropout=True,bias=True', '')
 flags.DEFINE_integer('num_layers', 4, 'Number of layers.')
 flags.DEFINE_string(
     'layer_0',
@@ -64,7 +68,7 @@ flags.DEFINE_string('sim_kernel', 'identity',
  else 0.4; else, try 0.001. """
 flags.DEFINE_float('yeta', 0.3, 'yeta for the gaussian kernel function.')
 """ final_act: identity, relu, sigmoid, tanh, sim_kernel (same as sim_kernel). """
-flags.DEFINE_string('final_act', 'relu',
+flags.DEFINE_string('final_act', 'identity',
                     'The final activation function applied to the NTN output.')
 """ loss_func: mse. """  # TODO: sigmoid pairwise, etc.
 flags.DEFINE_string('loss_func', 'mse', 'Loss function(s) to use.')
@@ -88,12 +92,12 @@ flags.DEFINE_boolean('log', False,
 flags.DEFINE_boolean('plot_results', False,
                      'Whether to plot the results or not.')
 
+FLAGS = tf.app.flags.FLAGS
 placeholders = {
-    'support_1': tf.sparse_placeholder(tf.float32),
+    'support_1': [tf.sparse_placeholder(tf.float32)],
     'features_1': tf.sparse_placeholder(tf.float32, shape=None),
-    'support_2': tf.sparse_placeholder(tf.float32),
+    'support_2': [tf.sparse_placeholder(tf.float32)],
     'features_2': tf.sparse_placeholder(tf.float32, shape=None),
-    'num_supports': tf.placeholder(tf.int32),
     'dist': tf.placeholder(tf.float32, shape=None),
     'norm_dist': tf.placeholder(tf.float32, shape=None),
     'dropout': tf.placeholder_with_default(0., shape=()),

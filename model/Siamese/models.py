@@ -65,7 +65,6 @@ class GCNTN(Model):
         self.inputs_2 = placeholders['features_2']
         self.support_1 = placeholders['support_1']
         self.support_2 = placeholders['support_2']
-        self.num_supports = placeholders['num_supports']
         self.num_features_1_nonzero = placeholders['num_features_1_nonzero']
         self.num_features_2_nonzero = placeholders['num_features_2_nonzero']
         self.input_dim = input_dim
