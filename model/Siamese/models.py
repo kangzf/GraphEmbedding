@@ -61,13 +61,14 @@ class GCNTN(Model):
         super(GCNTN, self).__init__(**kwargs)
         self.FLAGS = FLAGS
         self.placeholders = placeholders
-        self.inputs_1 = placeholders['features_1']
-        self.inputs_2 = placeholders['features_2']
-        self.support_1 = placeholders['support_1']
-        self.support_2 = placeholders['support_2']
-        self.num_features_1_nonzero = placeholders['num_features_1_nonzero']
-        self.num_features_2_nonzero = placeholders['num_features_2_nonzero']
+        self.inputs_1 = placeholders['inputs_1']
+        self.inputs_2 = placeholders['inputs_2']
+        self.laplacians_1 = placeholders['laplacians_1']
+        self.laplacians_2 = placeholders['laplacians_2']
+        self.num_inputs_1_nonzero = placeholders['num_inputs_1_nonzero']
+        self.num_inputs_2_nonzero = placeholders['num_inputs_2_nonzero']
         self.input_dim = input_dim
+        self.batch_size = FLAGS.batch_size
         self.sim_kernel = create_sim_kernel(
             FLAGS.sim_kernel, FLAGS.yeta)
         self.final_act = create_activation(
@@ -87,26 +88,35 @@ class GCNTN(Model):
         print('Created {} layers'.format(len(self.layers)))
 
         # Build the siamese model.
-        self.activations_list = [[], []]
-        for i, inputs in enumerate([self.inputs_1, self.inputs_2]):
-            activations = self.activations_list[i]
-            activations.append(inputs)
-            assert (len(self.layers) >= 2)
-            for j in range(0, len(self.layers) - 1):
-                layer = self.layers[j]
-                inputs_to_layer = activations[-1]
-                if layer.__class__.__name__ == 'GraphConvolution':
-                    inputs_to_layer = \
-                        [inputs_to_layer,
-                         self._get_support(i),
-                         self._get_num_features_nonzero(i)]
-                print('Graph {} through layer {}:{}'.format(
-                    i + 1, j + 1, layer.get_name()))
-                hidden = layer(inputs_to_layer)
-                activations.append(hidden)
+        # Go through each graph pair.
+        graphs_embeddings = [[], []]
+        for i in range(self.batch_size):
+            activations_list = [[], []]
+            # Go through each layer.
+            for j, inputs in enumerate([self.inputs_1[i], self.inputs_2[i]]):
+                activations = activations_list[j]
+                activations.append(inputs)
+                assert (len(self.layers) >= 2)
+                for k in range(0, len(self.layers) - 1):
+                    layer = self.layers[k]
+                    inputs_to_layer = activations[-1]
+                    if layer.__class__.__name__ == 'GraphConvolution':
+                        inputs_to_layer = \
+                            [inputs_to_layer,
+                             self._get_laplacians(i, j),
+                             self._get_num_inputs_nonzero(i, j)]
+                    print('Batch index {}: Graph {} through layer {}:{}'.format(
+                        i + 1, j + 1, k + 1, layer.get_name()))
+                    hidden = layer(inputs_to_layer)
+                    activations.append(hidden)
+                graphs_embeddings[j].append(activations_list[j][-1])
+        # Assume only the last layer is the merging layer, e.g. NTN, dot.
         merging_layer = self.layers[-1]
-        self.outputs = merging_layer(
-            [self.activations_list[0][-1], self.activations_list[1][-1]])
+        embed_mat_1 = tf.stack(graphs_embeddings[0])
+        embed_mat_2 = tf.stack(graphs_embeddings[1])
+        self.outputs = merging_layer([embed_mat_1, embed_mat_2])
+        assert(self.outputs.get_shape()[0] == self._get_dist().get_shape()[0]
+               == self.batch_size)
         print('Merging graph 1 and 2 through {}'.format(
             merging_layer.get_name()))
 
@@ -135,17 +145,17 @@ class GCNTN(Model):
             raise RuntimeError('Unknown loss function {}'.format(self.loss_func))
         tf.summary.scalar('total_loss', self.loss)
 
-    def _rank_loss(self, gamma):
-        y_pred = self.pred_sim()
-        pos_interact_score = y_pred[
-                             :FLAGS.batch_size_p]  # need set new flag for positive sample number & assume pred is a vector
-        neg_interact_score = y_pred[FLAGS.batch_size_p:]
-        diff_mat = tf.reshape(tf.tile(pos_interact_score, [FLAGS.num_negatives]),
-                              # need set new flag for negative sampling
-                              (-1,
-                               1)) - neg_interact_score  # assume negative sampling is conducted in this way: p+n1+n2+..+nk
-        rank_loss = tf.reduce_mean(-tf.log(tf.sigmoid(gamma * diff_mat)))
-        return rank_loss
+    # def _rank_loss(self, gamma):
+    #     y_pred = self.pred_sim()
+    #     pos_interact_score = y_pred[
+    #                          :FLAGS.batch_size_p]  # need set new flag for positive sample number & assume pred is a vector
+    #     neg_interact_score = y_pred[FLAGS.batch_size_p:]
+    #     diff_mat = tf.reshape(tf.tile(pos_interact_score, [FLAGS.num_negatives]),
+    #                           # need set new flag for negative sampling
+    #                           (-1,
+    #                            1)) - neg_interact_score  # assume negative sampling is conducted in this way: p+n1+n2+..+nk
+    #     rank_loss = tf.reduce_mean(-tf.log(tf.sigmoid(gamma * diff_mat)))
+    #     return rank_loss
 
     def pred_sim(self):
         return self.final_act(self.outputs)
@@ -156,24 +166,24 @@ class GCNTN(Model):
     def apply_final_act_np(self, score):
         return self.final_act_np(score)
 
-    def _get_support(self, i):
-        if i == 0:
-            return self.support_1
-        elif i == 1:
-            return self.support_2
+    def _get_laplacians(self, i, j):
+        if j == 0:
+            return self.laplacians_1[i]
+        elif j == 1:
+            return self.laplacians_2[i]
         else:
             assert (False)
 
-    def _get_num_features_nonzero(self, i):
-        if i == 0:
-            return self.num_features_1_nonzero
-        elif i == 1:
-            return self.num_features_2_nonzero
+    def _get_num_inputs_nonzero(self, i, j):
+        if j == 0:
+            return self.num_inputs_1_nonzero[i]
+        elif j == 1:
+            return self.num_inputs_2_nonzero[i]
         else:
             assert (False)
 
     def _get_dist(self):
         if self.FLAGS.dist_norm:
-            return self.placeholders['norm_dist']
+            return self.placeholders['norm_dists']
         else:
-            return self.placeholders['dist']
+            return self.placeholders['dists']

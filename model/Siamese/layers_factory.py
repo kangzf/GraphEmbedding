@@ -1,4 +1,4 @@
-from layers import GraphConvolution, Average, NTN
+from layers import GraphConvolution, Average, NTN, Dot
 import tensorflow as tf
 import numpy as np
 from math import exp
@@ -22,6 +22,8 @@ def create_layers(model, FLAGS):
             layers.append(create_Average_layer(layer_info, model))
         elif name == 'NTN':
             layers.append(create_NTN_layer(layer_info, model))
+        elif name == 'Dot':
+            layers.append(create_Dot_layer(layer_info, model))
         else:
             raise RuntimeError('Unknown layer {}'.format(name))
     return layers
@@ -52,7 +54,7 @@ def create_GraphConvolution_layer(layer_info, model, layer_id):
 
 
 def create_Average_layer(layer_info, model):
-    if not len(layer_info) <= 0:
+    if not len(layer_info) == 0:
         raise RuntimeError('Average layer must have 0 specs')
     return Average(logging=model.logging)
 
@@ -69,6 +71,10 @@ def create_NTN_layer(layer_info, model):
         bias=parse_as_bool(layer_info['bias']),
         logging=model.logging)
 
+def create_Dot_layer(layer_info, model):
+    if not len(layer_info) == 0:
+        raise RuntimeError('Dot layer must have 0 specs')
+    return Dot(logging=model.logging)
 
 def create_activation(act, sim_kernel=None, use_tf=True):
     if act == 'relu':

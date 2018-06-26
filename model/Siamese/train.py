@@ -57,10 +57,11 @@ def test(FLAGS, data, placeholders, dist_calculator, model, saver, sess):
             sim_i_j, test_time = run_tf(
                 FLAGS, data, placeholders, dist_calculator, model, saver, sess,
                 'test', i, j)
+            sim_i_j = sim_i_j[0]
             test_time *= 1000
+            true_sim = eval.get_true_sim(i, j, FLAGS.dist_norm)
             print('{},{},{:.2f}mec,{:.4f},{:.4f}'.format(
-                i, j, test_time, sim_i_j,
-                eval.get_true_sim(i, j, FLAGS.dist_norm)))
+                i, j, test_time, sim_i_j, true_sim))
             # assert (0 <= sim_i_j <= 1)
             test_sim_mat[i][i] = sim_i_j
             test_time_mat[i][j] = test_time

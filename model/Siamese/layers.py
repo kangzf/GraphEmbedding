@@ -133,7 +133,7 @@ class GraphConvolution(Layer):
 
     def _call(self, inputs):
         x = inputs[0]
-        self.support = inputs[1]  # TODO:fix
+        self.laplacians = inputs[1]  # TODO:fix
         num_features_nonzero = inputs[2]
 
         # dropout
@@ -143,16 +143,16 @@ class GraphConvolution(Layer):
             x = tf.nn.dropout(x, 1 - self.dropout)
 
         # convolve
-        supports = list()
-        for i in range(len(self.support)):
+        support_list = []
+        for i in range(len(self.laplacians)):
             if not self.featureless:
                 pre_sup = dot(x, self.vars['weights_' + str(i)],
                               sparse=self.sparse_inputs)
             else:
                 pre_sup = self.vars['weights_' + str(i)]
-            support = dot(self.support[i], pre_sup, sparse=True)
-            supports.append(support)
-        output = tf.add_n(supports)
+            support = dot(self.laplacians[i], pre_sup, sparse=True)
+            support_list.append(support)
+        output = tf.add_n(support_list)
 
         # bias
         if self.bias:
@@ -229,28 +229,29 @@ class NTN(Layer):
         x_1 = tf.nn.dropout(x_1, 1 - self.dropout)
         x_2 = tf.nn.dropout(x_2, 1 - self.dropout)
 
-        # one pair comparison
-        x_1 = tf.reshape(x_1, [1, -1])
-        x_2 = tf.reshape(x_2, [1, -1])
-
-        feature_map = []
-        for i in range(self.feature_map_dim):
-            V_out = tf.matmul(tf.reshape(self.vars['weights_V'][i], [1, -1]),
-                              tf.concat([tf.transpose(x_1), tf.transpose(x_2)], 0))
-            temp = tf.matmul(x_1, self.vars['weights_W'][:, :, i])
-            h = tf.reduce_sum(temp * x_2)  # h = K.sum(temp*e2,axis=1)
-            if self.bias:
-                middle = V_out + h + self.vars['bias'][i]
-            else:
-                middle = V_out + h
-            feature_map.append(middle)
-
-        tensor_bi_product = tf.stack(feature_map)  # axis=0
-        tensor_bi_product = self.inneract(tensor_bi_product)
-
-        output = tf.reduce_sum(self.vars['weights_U'] * tensor_bi_product)
+        temp = tf.einsum('ij,ajk->iak', x_1, self.vars['weights_W'])
+        h = tf.squeeze(tf.matmul(temp, tf.expand_dims(x_2, 2)))
+        V_out = tf.matmul(tf.concat([x_1, x_2], 1), tf.transpose(self.vars['weights_V']))
+        tensor_bi_product = V_out + h
+        if self.bias:
+            tensor_bi_product += self.vars['bias']
+        tensor_bi_product = self.act(tensor_bi_product)
+        # output: batch_size * 1
+        output = tf.matmul(tensor_bi_product, self.vars['weights_U'])
 
         return output
+
+
+class Dot(Layer):
+    """ Dot layer. """
+
+    def __init__(self, **kwargs):
+        super(Dot, self).__init__(**kwargs)
+
+    def _call(self, inputs):
+        x_1 = inputs[0]
+        x_2 = inputs[1]
+        return tf.diag_part(tf.matmul(x_1, x_2, transpose_b=True))
 
 
 # global unique layer ID dictionary for layer name assignment

@@ -53,22 +53,26 @@ flags.DEFINE_string(
 flags.DEFINE_string(
     'layer_2',
     'Average', '')
+# flags.DEFINE_string(
+#     'layer_3',
+#     'NTN:input_dim=16,feature_map_dim=10,inneract=relu,'
+#     'dropout=True,bias=True', '')
 flags.DEFINE_string(
     'layer_3',
-    'NTN:input_dim=16,feature_map_dim=10,inneract=relu,'
-    'dropout=True,bias=True', '')
+    'Dot', '')
+flags.DEFINE_integer('batch_size', 1, 'Number of graph pairs in a batch.')  # TODO: implement
 """ dist_norm: True, False. """
 flags.DEFINE_boolean('dist_norm', True,
                      'Whether to normalize the distance or not '
                      'when choosing the ground truth distance.')
 """ sim_kernel: gaussian, identity. """  # TODO: linear
-flags.DEFINE_string('sim_kernel', 'identity',
+flags.DEFINE_string('sim_kernel', 'gaussian',
                     'Name of the similarity kernel.')
 """ yeta: if norm_dist, recommend 0.3 for nef, 0.2 regular;
  else 0.4; else, try 0.001. """
 flags.DEFINE_float('yeta', 0.3, 'yeta for the gaussian kernel function.')
 """ final_act: identity, relu, sigmoid, tanh, sim_kernel (same as sim_kernel). """
-flags.DEFINE_string('final_act', 'identity',
+flags.DEFINE_string('final_act', 'sim_kernel',
                     'The final activation function applied to the NTN output.')
 """ loss_func: mse. """  # TODO: sigmoid pairwise, etc.
 flags.DEFINE_string('loss_func', 'mse', 'Loss function(s) to use.')
@@ -76,31 +80,37 @@ flags.DEFINE_string('loss_func', 'mse', 'Loss function(s) to use.')
 flags.DEFINE_float('dropout', 0.5, 'Dropout rate (1 - keep probability).')
 flags.DEFINE_float('weight_decay', 5e-4,
                    'Weight for L2 loss on embedding matrix.')
-
-# For training and validating.
-flags.DEFINE_integer('batch_size', 2, 'Number of graphs in a batch.')  # TODO: implement
 """ learning_rate: 0.01 recommended. """  # TODO: why 0.06 weird?
 flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
+
+# For training and validating.
 flags.DEFINE_integer('iters', 500, 'Number of iterations to train.')
 """ early_stopping: None for no early stopping. """
 flags.DEFINE_integer('early_stopping', None,
                      'Tolerance for early stopping (# of iters).')
 flags.DEFINE_boolean('log', False,
-                     'Whether to log the results via Tensorboard, etc. or not.')
+                     'Whether to log the results via Tensorboard or not.')
 
 # For testing.
 flags.DEFINE_boolean('plot_results', False,
-                     'Whether to plot the results or not.')
+                     'Whether to plot the results '
+                     '(involving all baselines) or not.')
 
 FLAGS = tf.app.flags.FLAGS
 placeholders = {
-    'support_1': [tf.sparse_placeholder(tf.float32)],
-    'features_1': tf.sparse_placeholder(tf.float32, shape=None),
-    'support_2': [tf.sparse_placeholder(tf.float32)],
-    'features_2': tf.sparse_placeholder(tf.float32, shape=None),
-    'dist': tf.placeholder(tf.float32, shape=None),
-    'norm_dist': tf.placeholder(tf.float32, shape=None),
+    'laplacians_1': [[tf.sparse_placeholder(tf.float32)]
+                  for _ in range(FLAGS.batch_size)],
+    'inputs_1': [tf.sparse_placeholder(tf.float32, shape=None)
+                 for _ in range(FLAGS.batch_size)],
+    'laplacians_2': [[tf.sparse_placeholder(tf.float32)]
+                  for _ in range(FLAGS.batch_size)],
+    'inputs_2': [tf.sparse_placeholder(tf.float32, shape=None)
+                 for _ in range(FLAGS.batch_size)],
+    'dists': tf.placeholder(tf.float32, shape=(FLAGS.batch_size, 1)),
+    'norm_dists': tf.placeholder(tf.float32, shape=(FLAGS.batch_size, 1)),
     'dropout': tf.placeholder_with_default(0., shape=()),
-    'num_features_1_nonzero': tf.placeholder(tf.int32),
-    'num_features_2_nonzero': tf.placeholder(tf.int32)
+    'num_inputs_1_nonzero': [tf.placeholder(tf.int32)
+                             for _ in range(FLAGS.batch_size)],
+    'num_inputs_2_nonzero': [tf.placeholder(tf.int32)
+                             for _ in range(FLAGS.batch_size)]
 }
