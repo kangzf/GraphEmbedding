@@ -1,7 +1,7 @@
 # AUTO TUNING PARAMETERS
 # Hyperparameters   | Range        | Note
 # ------------------------------------------------------------------------------
-# norm_dist          T/F            2 norm/no norm
+# dist_norm          T/F            2 norm/no norm
 # yeta               0.2/0.01       5 diff yetas
 # activation func    5              5 diff  activation layers
 # learning_rate      0.06-0.001     6 diff lr
@@ -21,7 +21,7 @@ dataset = 'aids50nef'
 file_name = '{}/logs/parameter_tuning_{}_{}.csv'.format(
     get_siamese_dir(), dataset, get_ts())
 
-header = ['norm_dist', 'yeta', 'final_act', 'learning_rate', 'iter',
+header = ['dist_norm', 'yeta', 'final_act', 'learning_rate', 'iter',
           'validation_ratio',
           'best_train_loss', 'best_train_loss_iter', 'best_val_loss',
           'best_val_loss_iter',
@@ -34,7 +34,7 @@ header = ['norm_dist', 'yeta', 'final_act', 'learning_rate', 'iter',
           'prec@8_nonorm', 'prec@9_nonorm', 'prec@10_nonorm', 'mrr_norm',
           'mrr_nonorm', 'mse_norm', 'mse_nonorm']
 
-norm_dist_range = [True, False]
+dist_norm_range = [True, False]
 yeta_range_norm = [0.1, 0.2, 0.3, 0.5, 0.8]
 yeta_range_nonorm = [0.1, 0.05, 0.01, 0.005, 0.001]
 final_act_range = ['identity', 'relu', 'sigmoid', 'tanh', 'sim_kernel']
@@ -49,13 +49,13 @@ def tune(FLAGS, placeholders):
     results_train = []
     results_val = []
     i = 1
-    for norm_dist in norm_dist_range:
-        yeta_range = yeta_range_norm if norm_dist == True else yeta_range_nonorm
+    for dist_norm in dist_norm_range:
+        yeta_range = yeta_range_norm if dist_norm == True else yeta_range_nonorm
         for yeta, final_act, lr, iteration, val_ratio in itertools.product(
                 yeta_range, final_act_range, lr_range, iter_range,
                 val_ratio_range):
             print('Number of tuning iteration: {}'.format(i),
-                  'norm_dist: {}'.format(norm_dist), 'yeta: {}'.format(yeta),
+                  'dist_norm: {}'.format(dist_norm), 'yeta: {}'.format(yeta),
                   'final_act: {}'.format(final_act),
                   'learning_rate: {}'.format(lr),
                   'iteration: {}'.format(iteration),
@@ -65,12 +65,12 @@ def tune(FLAGS, placeholders):
             reset_flag(FLAGS, flags.DEFINE_string, 'dataset', dataset)
             reset_flag(FLAGS, flags.DEFINE_float, 'valid_percentage',
                        val_ratio)
-            reset_flag(FLAGS, flags.DEFINE_bool, 'norm_dist', norm_dist)
+            reset_flag(FLAGS, flags.DEFINE_bool, 'dist_norm', dist_norm)
             reset_flag(FLAGS, flags.DEFINE_float, 'yeta', yeta)
             reset_flag(FLAGS, flags.DEFINE_string, 'final_act', final_act)
             reset_flag(FLAGS, flags.DEFINE_float, 'learning_rate', lr)
             reset_flag(FLAGS, flags.DEFINE_integer, 'iters', iteration)
-            reset_flag(FLAGS, flags.DEFINE_bool, 'log', True)
+            reset_flag(FLAGS, flags.DEFINE_bool, 'log', False)
             reset_flag(FLAGS, flags.DEFINE_bool, 'plot_results', False)
             FLAGS = tf.app.flags.FLAGS
             train_costs, train_times, val_costs, val_times, results \
@@ -86,21 +86,21 @@ def tune(FLAGS, placeholders):
 
             model_results = parse_results(results)
             csv_record([[str(x) for x in
-                         [norm_dist, yeta, final_act, lr, iteration,
+                         [dist_norm, yeta, final_act, lr, iteration,
                           val_ratio,
                           best_train_loss, best_train_iter, best_val_loss,
                           best_val_iter] + model_results]], f)
 
             if best_train_loss < best_results_train_loss:
                 best_results_train_loss = best_train_loss
-                results_train = [norm_dist, yeta, final_act, lr,
+                results_train = [dist_norm, yeta, final_act, lr,
                                  iteration, val_ratio,
                                  best_train_loss, best_train_iter] + \
                                 model_results
 
             if best_val_loss < best_results_val_loss:
                 best_results_val_loss = best_val_loss
-                results_val = [norm_dist, yeta, final_act, lr,
+                results_val = [dist_norm, yeta, final_act, lr,
                                iteration, val_ratio,
                                best_val_loss, best_val_iter] + model_results
 
@@ -108,7 +108,7 @@ def tune(FLAGS, placeholders):
     print(results_val)
 
     csv_record([['Final resultss:']], f)
-    csv_record([['norm_dist', 'yeta', 'final_act', 'learning_rate', 'iter',
+    csv_record([['dist_norm', 'yeta', 'final_act', 'learning_rate', 'iter',
                  'validation_ratio',
                  'best_train_loss', 'best_train_loss_iter',
                  'prec@1_norm', 'prec@2_norm', 'prec@3_norm', 'prec@4_norm',
@@ -122,7 +122,7 @@ def tune(FLAGS, placeholders):
                  'mrr_nonorm', 'mse_norm', 'mse_nonorm']], f)
     csv_record([[str(x) for x in results_train]], f)
 
-    csv_record([['norm_dist', 'yeta', 'final_act', 'learning_rate', 'iter',
+    csv_record([['dist_norm', 'yeta', 'final_act', 'learning_rate', 'iter',
                  'validation_ratio',
                  'best_val_loss', 'best_val_loss_iter',
                  'prec@1_norm', 'prec@2_norm', 'prec@3_norm', 'prec@4_norm',
