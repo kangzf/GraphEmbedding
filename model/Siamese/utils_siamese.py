@@ -20,3 +20,10 @@ def print_msec(sec):
 
 def get_siamese_dir():
     return cur_folder
+
+
+def get_phldr(phldr, key, tvt):
+    if 'train' in tvt or 'val' in tvt:
+        return phldr[key]
+    else:
+        return phldr['test_{}'.format(key.replace('inputs', 'input'))]

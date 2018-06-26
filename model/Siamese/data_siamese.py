@@ -1,5 +1,6 @@
 from data import Data
 from utils import load_data, exec_turnoff_print
+from utils_siamese import get_phldr
 from samplers import RandomSampler
 from sklearn.preprocessing import OneHotEncoder
 import scipy.sparse as sp
@@ -65,16 +66,20 @@ class SiameseModelData(Data):
             g2 = self._get_orig_train_graph(train_id)
             pairs = [(g1, g2)]
         for i, (g1, g2) in enumerate(pairs):
-            rtn[phldr['inputs_1'][i]] = g1.get_node_inputs()
-            rtn[phldr['inputs_2'][i]] = g2.get_node_inputs()
-            rtn[phldr['num_inputs_1_nonzero'][i]] = \
+            rtn[get_phldr(phldr, 'inputs_1', tvt)[i]] = \
+                g1.get_node_inputs()
+            rtn[get_phldr(phldr, 'inputs_2', tvt)[i]] = \
+                g2.get_node_inputs()
+            rtn[get_phldr(phldr, 'num_inputs_1_nonzero', tvt)[i]] = \
                 g1.get_node_inputs_num_nonzero()
-            rtn[phldr['num_inputs_2_nonzero'][i]] = \
+            rtn[get_phldr(phldr, 'num_inputs_2_nonzero', tvt)[i]] = \
                 g2.get_node_inputs_num_nonzero()
             num_laplacians = 1
             for j in range(num_laplacians):
-                rtn[phldr['laplacians_1'][i][j]] = g1.get_laplacians()[j]
-                rtn[phldr['laplacians_2'][i][j]] = g2.get_laplacians()[j]
+                rtn[get_phldr(phldr, 'laplacians_1', tvt)[i][j]] = \
+                    g1.get_laplacians()[j]
+                rtn[get_phldr(phldr, 'laplacians_2', tvt)[i][j]] = \
+                    g2.get_laplacians()[j]
                 assert (len(g1.get_laplacians()) == len(g2.get_laplacians())
                         == num_laplacians)
             if tvt == 'train' or tvt == 'val':

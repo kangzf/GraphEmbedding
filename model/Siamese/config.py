@@ -5,7 +5,7 @@ flags = tf.app.flags
 
 # For data preprocessing.
 """ dataset: aids50, aids50nef, aids10k, aids10knef. """
-flags.DEFINE_string('dataset', 'aids50nef', 'Dataset string.')
+flags.DEFINE_string('dataset', 'aids10knef', 'Dataset string.')
 """ valid_percentage: (0, 1). """
 flags.DEFINE_float('valid_percentage', 0.4,
                    '(# validation graphs) / (# validation + # training graphs.')
@@ -60,7 +60,7 @@ flags.DEFINE_string(
 flags.DEFINE_string(
     'layer_3',
     'Dot', '')
-flags.DEFINE_integer('batch_size', 1, 'Number of graph pairs in a batch.')  # TODO: implement
+flags.DEFINE_integer('batch_size', 20, 'Number of graph pairs in a batch.')  # TODO: implement
 """ dist_norm: True, False. """
 flags.DEFINE_boolean('dist_norm', True,
                      'Whether to normalize the distance or not '
@@ -88,7 +88,7 @@ flags.DEFINE_integer('iters', 500, 'Number of iterations to train.')
 """ early_stopping: None for no early stopping. """
 flags.DEFINE_integer('early_stopping', None,
                      'Tolerance for early stopping (# of iters).')
-flags.DEFINE_boolean('log', False,
+flags.DEFINE_boolean('log', True,
                      'Whether to log the results via Tensorboard or not.')
 
 # For testing.
@@ -98,19 +98,29 @@ flags.DEFINE_boolean('plot_results', False,
 
 FLAGS = tf.app.flags.FLAGS
 placeholders = {
+     # When training and validating,
+     #    send FLAGS.batch_size graph pairs per sess.run.
     'laplacians_1': [[tf.sparse_placeholder(tf.float32)]
-                  for _ in range(FLAGS.batch_size)],
-    'inputs_1': [tf.sparse_placeholder(tf.float32, shape=None)
+                     for _ in range(FLAGS.batch_size)],
+    'inputs_1': [tf.sparse_placeholder(tf.float32)
                  for _ in range(FLAGS.batch_size)],
     'laplacians_2': [[tf.sparse_placeholder(tf.float32)]
-                  for _ in range(FLAGS.batch_size)],
-    'inputs_2': [tf.sparse_placeholder(tf.float32, shape=None)
+                     for _ in range(FLAGS.batch_size)],
+    'inputs_2': [tf.sparse_placeholder(tf.float32)
                  for _ in range(FLAGS.batch_size)],
-    'dists': tf.placeholder(tf.float32, shape=(FLAGS.batch_size, 1)),
-    'norm_dists': tf.placeholder(tf.float32, shape=(FLAGS.batch_size, 1)),
-    'dropout': tf.placeholder_with_default(0., shape=()),
     'num_inputs_1_nonzero': [tf.placeholder(tf.int32)
                              for _ in range(FLAGS.batch_size)],
     'num_inputs_2_nonzero': [tf.placeholder(tf.int32)
-                             for _ in range(FLAGS.batch_size)]
+                             for _ in range(FLAGS.batch_size)],
+    'dists': tf.placeholder(tf.float32, shape=(None, 1)),
+    'norm_dists': tf.placeholder(tf.float32, shape=(None, 1)),
+    'dropout': tf.placeholder_with_default(0., shape=()),
+
+    # When testing, only send 1 graph pair per sess.run.
+    'test_laplacians_1': [[tf.sparse_placeholder(tf.float32)]],
+    'test_input_1': [tf.sparse_placeholder(tf.float32)],
+    'test_laplacians_2': [[tf.sparse_placeholder(tf.float32)]],
+    'test_input_2': [tf.sparse_placeholder(tf.float32)],
+    'test_num_input_1_nonzero': [tf.placeholder(tf.int32)],
+    'test_num_input_2_nonzero': [tf.placeholder(tf.int32)],
 }

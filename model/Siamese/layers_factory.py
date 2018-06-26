@@ -43,7 +43,7 @@ def create_GraphConvolution_layer(layer_info, model, layer_id):
     return GraphConvolution(
         input_dim=input_dim,
         output_dim=int(layer_info['output_dim']),
-        placeholders=model.placeholders,
+        placeholders=model.phldr,
         dropout=parse_as_bool(layer_info['dropout']),
         sparse_inputs=parse_as_bool(layer_info['sparse_inputs']),
         act=create_activation(layer_info['act']),
@@ -65,7 +65,7 @@ def create_NTN_layer(layer_info, model):
     return NTN(
         input_dim=int(layer_info['input_dim']),
         feature_map_dim=int(layer_info['feature_map_dim']),
-        placeholders=model.placeholders,
+        placeholders=model.phldr,
         dropout=parse_as_bool(layer_info['dropout']),
         inneract=create_activation(layer_info['inneract']),
         bias=parse_as_bool(layer_info['bias']),

@@ -34,10 +34,11 @@ class Layer(object):
     def get_name(self):
         return self.name
 
-    def __call__(self, inputs):
+    def __call__(self, inputs, force_no_logging=False):
         self.called_times += 1
         with tf.name_scope(self.name + '_call_' + str(self.called_times)):
-            if self.logging and not self.sparse_inputs:
+            if self.logging and not self.sparse_inputs \
+                    and not force_no_logging:
                 if type(inputs) is list:
                     # Assume only the first item is the actual input tensor.
                     inputs_to_log = inputs[0]
@@ -45,7 +46,7 @@ class Layer(object):
                     inputs_to_log = inputs
                 tf.summary.histogram(self.name + '/inputs', inputs_to_log)
             outputs = self._call(inputs)
-            if self.logging:
+            if self.logging and not force_no_logging:
                 tf.summary.histogram(self.name + '/outputs', outputs)
             return outputs
 
@@ -220,6 +221,7 @@ class NTN(Layer):
 
         if self.logging:
             self._log_vars()
+
 
     def _call(self, inputs):
         x_1 = inputs[0]
