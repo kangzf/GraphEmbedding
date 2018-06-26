@@ -19,7 +19,7 @@ def create_layers(model, FLAGS):
         if name == 'GraphConvolution':
             layers.append(create_GraphConvolution_layer(layer_info, model, i))
         elif name == 'Average':
-            layers.append(create_Average_layer(layer_info))
+            layers.append(create_Average_layer(layer_info, model))
         elif name == 'NTN':
             layers.append(create_NTN_layer(layer_info, model))
         else:
@@ -51,10 +51,10 @@ def create_GraphConvolution_layer(layer_info, model, layer_id):
         logging=model.logging)
 
 
-def create_Average_layer(layer_info):
+def create_Average_layer(layer_info, model):
     if not len(layer_info) <= 0:
         raise RuntimeError('Average layer must have 0 specs')
-    return Average()
+    return Average(logging=model.logging)
 
 
 def create_NTN_layer(layer_info, model):

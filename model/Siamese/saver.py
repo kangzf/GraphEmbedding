@@ -40,7 +40,7 @@ class Saver(object):
             self._bool_to_str(
                 FLAGS.sampler_duplicate_removal, 'samplerDuplicateRemoval'),
             FLAGS.num_layers,
-            self._bool_to_str(FLAGS.norm_dist, 'normDist'),
+            self._bool_to_str(FLAGS.dist_norm, 'normDist'),
             FLAGS.sim_kernel, FLAGS.yeta,
             FLAGS.final_act, FLAGS.loss_func, FLAGS.batch_size,
             FLAGS.learning_rate]:

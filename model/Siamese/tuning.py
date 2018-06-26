@@ -70,7 +70,7 @@ def tune(FLAGS, placeholders):
             reset_flag(FLAGS, flags.DEFINE_string, 'final_act', final_act)
             reset_flag(FLAGS, flags.DEFINE_float, 'learning_rate', lr)
             reset_flag(FLAGS, flags.DEFINE_integer, 'iters', iteration)
-            reset_flag(FLAGS, flags.DEFINE_bool, 'log', False)
+            reset_flag(FLAGS, flags.DEFINE_bool, 'log', True)
             reset_flag(FLAGS, flags.DEFINE_bool, 'plot_results', False)
             FLAGS = tf.app.flags.FLAGS
             train_costs, train_times, val_costs, val_times, results \

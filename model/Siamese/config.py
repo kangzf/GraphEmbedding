@@ -53,8 +53,8 @@ flags.DEFINE_string(
     'layer_3',
     'NTN:input_dim=16,feature_map_dim=10,inneract=relu,'
     'dropout=True,bias=True', '')
-""" norm_dist: True, False. """
-flags.DEFINE_boolean('norm_dist', True,
+""" dist_norm: True, False. """
+flags.DEFINE_boolean('dist_norm', True,
                      'Whether to normalize the distance or not.')
 """ sim_kernel: gaussian, identity. """  # TODO: linear
 flags.DEFINE_string('sim_kernel', 'identity',
@@ -73,12 +73,13 @@ flags.DEFINE_float('weight_decay', 5e-4,
 
 # For training and validating.
 flags.DEFINE_integer('batch_size', 2, 'Number of graphs in a batch.')  # TODO: implement
+""" learning_rate: 0.01 recommended. """  # TODO: why 0.06 weird?
 flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
 flags.DEFINE_integer('iters', 500, 'Number of iterations to train.')
 """ early_stopping: None for no early stopping. """
 flags.DEFINE_integer('early_stopping', None,
                      'Tolerance for early stopping (# of iters).')
-flags.DEFINE_boolean('log', False,
+flags.DEFINE_boolean('log', True,
                      'Whether to log the results via Tensorboard, etc. or not.')
 
 # For testing.

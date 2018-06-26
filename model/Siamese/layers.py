@@ -1,10 +1,6 @@
 from inits import *
 import tensorflow as tf
 
-# global unique layer ID dictionary for layer name assignment
-_LAYER_UIDS = {}
-
-
 class Layer(object):
     """Base layer class. Defines basic API for all layer objects.
     Implementation inspired by keras (http://keras.io).
@@ -26,19 +22,20 @@ class Layer(object):
             assert kwarg in allowed_kwargs, 'Invalid keyword argument: ' + kwarg
         name = kwargs.get('name')
         if not name:
-            layer = self.__class__.__name__.lower()
-            name = layer + '_' + str(get_layer_uid(layer))
+            name = get_layer_name(self)
         self.name = name
         self.vars = {}
         logging = kwargs.get('logging', False)
         self.logging = logging
         self.sparse_inputs = False
+        self.called_times = 0
 
     def get_name(self):
         return self.name
 
     def __call__(self, inputs):
-        with tf.name_scope(self.name):
+        self.called_times += 1
+        with tf.name_scope(self.name + '_call_' + str(self.called_times)):
             if self.logging and not self.sparse_inputs:
                 if type(inputs) is list:
                     # Assume only the first item is the actual input tensor.
@@ -56,7 +53,7 @@ class Layer(object):
 
     def _log_vars(self):
         for var in self.vars:
-            tf.summary.histogram(self.name + '/vars/' + var, self.vars[var])
+            tf.summary.histogram(self.name + '_weights/' + var, self.vars[var])
 
     def handle_dropout(self, dropout_bool, placeholders):
         if dropout_bool:
@@ -145,7 +142,6 @@ class GraphConvolution(Layer):
             x = tf.nn.dropout(x, 1 - self.dropout)
 
         # convolve
-        # one pair comparison
         supports = list()
         for i in range(len(self.support)):
             if not self.featureless:
@@ -178,7 +174,7 @@ class Average(Layer):
 
 
 class Attention(Layer):
-    """Average layer."""
+    """Attention layer."""
 
     def __init__(self, input_dim, sparse_inputs=False, **kwargs):
         super(Attention, self).__init__(**kwargs)
@@ -211,7 +207,8 @@ class NTN(Layer):
         self.handle_dropout(dropout, placeholders)
 
         with tf.variable_scope(self.name + '_vars'):
-            self.vars['weights_W'] = glorot([input_dim, input_dim, feature_map_dim],
+            self.vars['weights_W'] = glorot([input_dim, input_dim,
+                                             feature_map_dim],
                                             name='weights_W')
             self.vars['weights_V'] = glorot([feature_map_dim, input_dim * 2],
                                             name='weights_V')
@@ -255,14 +252,22 @@ class NTN(Layer):
         return output
 
 
-def get_layer_uid(layer_name=''):
-    """Helper function, assigns unique layer IDs."""
+# global unique layer ID dictionary for layer name assignment
+_LAYER_UIDS = {}
+_LAYERS = []
+
+def get_layer_name(layer):
+    """Helper function, assigns layer names and unique layer IDs."""
+    layer_name = layer.__class__.__name__.lower()
     if layer_name not in _LAYER_UIDS:
         _LAYER_UIDS[layer_name] = 1
-        return 1
+        layer_id = 1
     else:
         _LAYER_UIDS[layer_name] += 1
-        return _LAYER_UIDS[layer_name]
+        layer_id = _LAYER_UIDS[layer_name]
+    _LAYERS.append(layer)
+    return str(len(_LAYERS)) + '_' + \
+           layer_name + '_' + str(layer_id)
 
 
 def sparse_dropout(x, keep_prob, noise_shape):

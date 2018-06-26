@@ -68,9 +68,7 @@ class GCNTN(Model):
         self.num_supports = placeholders['num_supports']
         self.num_features_1_nonzero = placeholders['num_features_1_nonzero']
         self.num_features_2_nonzero = placeholders['num_features_2_nonzero']
-
         self.input_dim = input_dim
-
         self.sim_kernel = create_sim_kernel(
             FLAGS.sim_kernel, FLAGS.yeta)
         self.final_act = create_activation(
@@ -79,9 +77,9 @@ class GCNTN(Model):
             FLAGS.final_act, self.sim_kernel, use_tf=False)
         self.loss_func = FLAGS.loss_func
         self.weight_decay = FLAGS.weight_decay
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)
+        self.optimizer = tf.train.AdamOptimizer(
+            learning_rate=FLAGS.learning_rate)
         print('input_dim', input_dim)
-
         self.build()
 
     def _build(self):
@@ -104,7 +102,7 @@ class GCNTN(Model):
                          self._get_support(i),
                          self._get_num_features_nonzero(i)]
                 print('Graph {} through layer {}:{}'.format(
-                    i + 1, j, layer.get_name()))
+                    i + 1, j + 1, layer.get_name()))
                 hidden = layer(inputs_to_layer)
                 activations.append(hidden)
         merging_layer = self.layers[-1]
@@ -114,7 +112,8 @@ class GCNTN(Model):
             merging_layer.get_name()))
 
         # Store model variables for easy access
-        variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.name)
+        variables = tf.get_collection(
+            tf.GraphKeys.GLOBAL_VARIABLES, scope=self.name)
         self.vars = {var.name: var for var in variables}
 
     def _loss(self):
@@ -175,7 +174,7 @@ class GCNTN(Model):
             assert (False)
 
     def _get_dist(self):
-        if self.FLAGS.norm_dist:
+        if self.FLAGS.dist_norm:
             return self.placeholders['norm_dist']
         else:
             return self.placeholders['dist']
