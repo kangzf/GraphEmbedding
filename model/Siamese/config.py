@@ -4,8 +4,8 @@ import tensorflow as tf
 flags = tf.app.flags
 
 # For data preprocessing.
-""" dataset: aids50, aids50nef, aids10k, aids10knef. """
-flags.DEFINE_string('dataset', 'aids10knef', 'Dataset string.')
+""" dataset: aids50nef, aids700nef, aids10knef. """
+flags.DEFINE_string('dataset', 'aids700nef', 'Dataset string.')
 """ valid_percentage: (0, 1). """
 flags.DEFINE_float('valid_percentage', 0.4,
                    '(# validation graphs) / (# validation + # training graphs.')
@@ -21,8 +21,8 @@ flags.DEFINE_string('edge_feat_processor', None,
                     'How to process the edge feature.')
 """ dist_metric: ged. """
 flags.DEFINE_string('dist_metric', 'ged', 'Distance metric to use.')
-""" dist_algo: beam80 for ged. """
-flags.DEFINE_string('dist_algo', 'beam80',
+""" dist_algo: beam80, astar for ged. """
+flags.DEFINE_string('dist_algo', 'astar',
                     'Ground-truth distance algorithm to use.')
 """ sampler: random. """  # TODO: density
 flags.DEFINE_string('sampler', 'random', 'Sampler to use.')

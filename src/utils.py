@@ -16,9 +16,6 @@ def load_data(data, train):
     if data == 'syn':
         from data import SynData
         return SynData(train)
-    elif data == 'aids50':
-        from data import AIDS50Data
-        return AIDS50Data(train)
     elif data == 'aids10k_small':
         from data import AIDS10kSmallData
         return AIDS10kSmallData(train)
@@ -31,6 +28,10 @@ def load_data(data, train):
     elif data == 'aids50nef':
         from data import AIDS50NEFData
         return AIDS50NEFData(train)
+    elif data == 'aids700nef':
+        from data import AIDS700nefData
+        return AIDS700nefData(train)
+
     else:
         raise RuntimeError('Not recognized data %s' % data)
 

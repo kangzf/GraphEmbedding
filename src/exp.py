@@ -8,6 +8,7 @@ from distance import ged
 from similarity import create_sim_kernel
 from results import load_results_as_dict, load_result
 import networkx as nx
+from random import choice
 
 check_nx_version()
 import multiprocessing as mp
@@ -203,8 +204,7 @@ def exp4():
     row_graphs = load_data(dataset, train=False)
     col_graphs = load_data(dataset, train=True)
     model = prompt('Which model?')
-    if model != 'astar':
-        exec_turnoff_print()
+    exec_turnoff_print()
     num_cpu = prompt_get_cpu()
     real_dataset_run_helper(dataset, model, row_graphs, col_graphs, num_cpu)
 
@@ -644,5 +644,29 @@ def get_sim_kernel_points(ged_mat, sim_kernel):
     return xs, ys
 
 
+def exp10():
+    """ Check symmetry of GED. """
+    exec_turnoff_print()
+    train_data = load_data('aids50nef', train=True)
+    for i in range(10000):
+        g1 = choice(train_data.graphs)
+        g2 = choice(train_data.graphs)
+        if g1.number_of_nodes() <= 10 and g2.number_of_nodes() <= 10:
+            print(g1.number_of_nodes(), g2.number_of_nodes(), g1.number_of_edges(), g2.number_of_edges())
+            algo = 'astar'
+            print(algo)
+            d = ged(g1, g2, algo)
+            print( g1.graph['gid'], g2.graph['gid'], d)
+            d = ged(g2, g1, algo)
+            print(g2.graph['gid'], g1.graph['gid'], d)
+            algo = 'beam80'
+            print(algo)
+            d = ged(g1, g2, algo)
+            print(g1.graph['gid'], g2.graph['gid'], d)
+            d = ged(g2, g1, algo)
+            print(g2.graph['gid'], g1.graph['gid'], d)
+            print()
+
+
 if __name__ == '__main__':
-    exp9()
+    exp4()
