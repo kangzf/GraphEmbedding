@@ -7,7 +7,6 @@ import networkx as nx
 from glob import glob
 from collections import defaultdict
 import random
-from random import sample, shuffle
 
 random.seed(123)
 
@@ -82,15 +81,16 @@ def get_old_aids_id():
     return [get_file_base_id(file) for file in files]
 
 
-def gen_aids10k(additional=False):
+def gen_aids_small(name, additional=False):
     datadir = get_root_path() + '/data'
-    dirin = datadir + '/AIDS'
-    sfn = get_save_path() + '/aids_orig'
+    dirin = datadir + '/AIDS40k_orig'
+    sfn = get_save_path() + '/aids40k_orig'
     loaded = load_as_dict(sfn)
     if not loaded:
         graphs = {}
         nodes_graphs = defaultdict(list)
         lesseq30 = set()
+        lesseq10 = set()
         disconnects = set()
         # Iterate through all 40k graphs.
         for file in glob(dirin + '/*.gexf'):
@@ -104,40 +104,52 @@ def gen_aids10k(additional=False):
             nodes_graphs[g.number_of_nodes()].append(gid)
             if g.number_of_nodes() <= 30:
                 lesseq30.add(gid)
-        save_as_dict(sfn, graphs, nodes_graphs, lesseq30, disconnects)
+            if g.number_of_nodes() <= 10:
+                lesseq10.add(gid)
+        save_as_dict(sfn, graphs, nodes_graphs, lesseq30, lesseq10, disconnects)
     else:
         graphs = loaded['graphs']
         nodes_graphs = loaded['nodes_graphs']
         lesseq30 = loaded['lesseq30']
+        lesseq10 = loaded['lesseq10']
         disconnects = loaded['disconnects']
     print(len(disconnects), 'disconnected graphs out of', len(graphs))
+    print(len(lesseq30), 'with <= 30 nodes')
+    print(len(lesseq10), 'with <= 10 nodes')
     # exit(1)
-    # print(nodes_graphs[222])
-    # print(nodes_graphs[2])
-    train_dir = '{}/AIDS10k/train'.format(datadir)
+    train_dir = '{}/{}/train'.format(datadir, name)
     if additional:
-        train_data = load_data('aids10k', train=True)
+        train_data = load_data(name.lower(), train=True)
         test_dir_str = 'test2'
     else:
         exec('mkdir -p {}'.format(train_dir))
         test_dir_str = 'test'
-    test_dir = '{}/AIDS10k/{}'.format(datadir, test_dir_str)
+    test_dir = '{}/{}/{}'.format(datadir, name, test_dir_str)
     exec('mkdir -p {}'.format(test_dir))
     if not additional:
-        for num_node in range(5, 23):
-            choose = sample(nodes_graphs[num_node], 1)[0]
-            print('choose {} with {} nodes'.format(choose, num_node))
-            nx.write_gexf(graphs[choose], test_dir + '/{}.gexf'.format(choose))
-            lesseq30.remove(choose)
-        for tid in sample(lesseq30, 10000):
-            nx.write_gexf(graphs[tid], train_dir + '/{}.gexf'.format(tid))
+        if name == 'AIDS10k':
+            for num_node in range(5, 23):
+                choose = random.Random(123).sample(nodes_graphs[num_node], 1)[0]
+                print('choose {} with {} nodes'.format(choose, num_node))
+                nx.write_gexf(
+                    graphs[choose], test_dir + '/{}.gexf'.format(choose))
+                lesseq30.remove(choose)
+            for tid in random.Random(123).sample(lesseq30, 10000):
+                nx.write_gexf(graphs[tid], train_dir + '/{}.gexf'.format(tid))
+        elif name == 'AIDS700nef':
+            lesseq10 = sample_from_lessthan10eq(
+                train_dir, lesseq10, 560, graphs, 'train')
+            sample_from_lessthan10eq(
+                test_dir, lesseq10, 140, graphs, 'test')
     else:
+        assert (name == 'AIDS10k')
         for num_node in range(5, 30):
             k = 4
             from_li = nodes_graphs[num_node]
             print('sampling {} from {} (size={})'.format(k, len(from_li),
                                                          num_node))
-            choose = sample_exclude(from_li, k, train_data.get_gids())
+            choose = random.Random(123).sample_exclude(
+                from_li, k, train_data.get_gids())
             print('choose {} with {} nodes'.format(choose, num_node))
             for c in choose:
                 nx.write_gexf(graphs[c], test_dir + '/{}.gexf'.format(c))
@@ -146,7 +158,7 @@ def gen_aids10k(additional=False):
 
 def sample_exclude(from_li, k, exclude):
     rtn = set()
-    shuffle(from_li)
+    random.Random(123).shuffle(from_li)
     idx = 0
     for i in range(k):
         while True:
@@ -158,4 +170,14 @@ def sample_exclude(from_li, k, exclude):
     return rtn
 
 
-gen_aids10k(additional=True)
+def sample_from_lessthan10eq(dir, lesseq10, num, graphs, s):
+    for gid in sorted(random.Random(123).sample(lesseq10, num)):
+        g = graphs[gid]
+        print('{}: choose {} with {} nodes'.format(
+            s, gid, g.number_of_nodes()))
+        nx.write_gexf(g, dir + '/{}.gexf'.format(gid))
+        lesseq10.remove(gid)
+    return lesseq10
+
+
+gen_aids_small(name='AIDS700nef', additional=False)

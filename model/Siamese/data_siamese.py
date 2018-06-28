@@ -1,9 +1,6 @@
-import sys
-from os.path import dirname, abspath
-
-sys.path.insert(0, "{}/../src".format(dirname(dirname(abspath(__file__)))))
 from data import Data
 from utils import load_data, exec_turnoff_print
+from utils_siamese import get_phldr
 from samplers import RandomSampler
 from sklearn.preprocessing import OneHotEncoder
 import scipy.sparse as sp
@@ -30,13 +27,13 @@ class SiameseModelData(Data):
             self.valid_data.num_graphs(), \
             self.test_data.num_graphs()))
 
-    def init(self, FLAGS):
+    def init(self):
         orig_train_data = load_data(self.dataset, train=True)
         self.n = len(orig_train_data.graphs)
-        self.node_feat_encoder = self._get_node_feature_encoder( \
-            orig_train_data.graphs)
         train_gs, valid_gs = self._train_val_split(orig_train_data)
         test_gs = load_data(self.dataset, train=False).graphs
+        self.node_feat_encoder = self._get_node_feature_encoder( \
+            orig_train_data.graphs + test_gs)
         self._check_graphs_num(test_gs, 'test')
         self.train_data = ModelGraphList(
             self.sampler, self.sample_num, self.sampler_duplicate_removal,
@@ -54,36 +51,50 @@ class SiameseModelData(Data):
     def input_dim(self):
         return self.node_feat_encoder.input_dim()
 
-    def get_feed_dict(self, FLAGS, placeholders, dist_calculator, tvt, \
+    def get_feed_dict(self, FLAGS, phldr, dist_calculator, tvt, \
                       test_id, train_id):
-        feed_dict = dict()
+        rtn = dict()
         # no pair is specified == train or val
-        if test_id is None or train_id is None:
+        if tvt == 'train' or tvt == 'val':
             assert (test_id is None and train_id is None)
-            g1, g2 = self._get_graph_pair(tvt)
-            dist, normalized_dist = self._get_dist(
-                g1.get_nxgraph(), g2.get_nxgraph(), dist_calculator)
-            feed_dict[placeholders['dist']] = dist
-            feed_dict[placeholders['norm_dist']] = normalized_dist
+            pairs = []
+            for _ in range(FLAGS.batch_size):
+                pairs.append(self._get_graph_pair(tvt))
         else:
+            assert (tvt == 'test')
             g1 = self.test_data.get_graph(test_id)
             g2 = self._get_orig_train_graph(train_id)
-            # No need to feed the labels.
-        feed_dict[placeholders['features_1']] = g1.get_node_features()
-        feed_dict[placeholders['features_2']] = g2.get_node_features()
-        num_support = 1
-        # for i in range(num_support):
-        feed_dict[placeholders['support_1']] = g1.get_supports()  # TODO: turn into batching
-        feed_dict[placeholders['support_2']] = g2.get_supports()
-        feed_dict[placeholders['num_supports']] = len(g1.get_supports())
-        assert (len(g1.get_supports()) == len(g2.get_supports()))
-        feed_dict[placeholders['num_features_1_nonzero']] = \
-            g1.get_node_features()[1].shape  # TODO: refactor
-        feed_dict[placeholders['num_features_2_nonzero']] = \
-            g2.get_node_features()[1].shape
-        if tvt == 'train' or tvt == 'val':
-            feed_dict[placeholders['dropout']] = FLAGS.dropout
-        return feed_dict
+            pairs = [(g1, g2)]
+        for i, (g1, g2) in enumerate(pairs):
+            rtn[get_phldr(phldr, 'inputs_1', tvt)[i]] = \
+                g1.get_node_inputs()
+            rtn[get_phldr(phldr, 'inputs_2', tvt)[i]] = \
+                g2.get_node_inputs()
+            rtn[get_phldr(phldr, 'num_inputs_1_nonzero', tvt)[i]] = \
+                g1.get_node_inputs_num_nonzero()
+            rtn[get_phldr(phldr, 'num_inputs_2_nonzero', tvt)[i]] = \
+                g2.get_node_inputs_num_nonzero()
+            num_laplacians = 1
+            for j in range(num_laplacians):
+                rtn[get_phldr(phldr, 'laplacians_1', tvt)[i][j]] = \
+                    g1.get_laplacians()[j]
+                rtn[get_phldr(phldr, 'laplacians_2', tvt)[i][j]] = \
+                    g2.get_laplacians()[j]
+                assert (len(g1.get_laplacians()) == len(g2.get_laplacians())
+                        == num_laplacians)
+            if tvt == 'train' or tvt == 'val':
+                dists = np.zeros((FLAGS.batch_size, 1))
+                norm_dists = np.zeros((FLAGS.batch_size, 1))
+                for i in range(FLAGS.batch_size):
+                    g1, g2 = self._get_graph_pair(tvt)
+                    dist, norm_dist = self._get_dist(
+                        g1.get_nxgraph(), g2.get_nxgraph(), dist_calculator)
+                    dists[i] = dist
+                    norm_dists[i] = norm_dist
+                rtn[phldr['dists']] = dists
+                rtn[phldr['norm_dists']] = norm_dists
+                rtn[phldr['dropout']] = FLAGS.dropout
+        return rtn
 
     def m_n(self):
         return self.m, self.n
@@ -150,16 +161,16 @@ class SiameseModelData(Data):
 class NodeFeatureOneHotEncoder(object):
     def __init__(self, gs, node_feat_name):
         self.node_feat_name = node_feat_name
-        features_set = set()
+        inputs_set = set()
         for g in gs:
-            features_set = features_set | set(self._node_feat_dic(g).values())
-        self.feat_idx = {feat: idx for idx, feat in enumerate(features_set)}
+            inputs_set = inputs_set | set(self._node_feat_dic(g).values())
+        self.feat_idx_dic = {feat: idx for idx, feat in enumerate(inputs_set)}
         self.oe = OneHotEncoder().fit(
-            np.array(list(self.feat_idx.values())).reshape(-1, 1))
+            np.array(list(self.feat_idx_dic.values())).reshape(-1, 1))
 
     def encode(self, g):
         node_feat_dic = self._node_feat_dic(g)
-        temp = [self.feat_idx[node_feat_dic[n]] for n in g.nodes()]
+        temp = [self.feat_idx_dic[node_feat_dic[n]] for n in g.nodes()]
         return self.oe.transform(np.array(temp).reshape(-1, 1)).toarray()
 
     def input_dim(self):
@@ -195,28 +206,32 @@ class ModelGraphList(object):
 class ModelGraph(object):
     def __init__(self, nxgraph, node_feat_encoder):
         self.nxgraph = nxgraph
-        encoded_features = node_feat_encoder.encode(nxgraph)
-        self.node_features = self._preprocess_features( \
-            sp.csr_matrix(encoded_features))
-        self.supports = self._preprocess_adj(nx.adjacency_matrix(nxgraph))
+        encoded_inputs = node_feat_encoder.encode(nxgraph)
+        self.node_inputs = self._preprocess_inputs(
+            sp.csr_matrix(encoded_inputs))
+        # Only one laplacian, i.e. Laplacian.
+        self.laplacians = [self._preprocess_adj(nx.adjacency_matrix(nxgraph))]
 
     def get_nxgraph(self):
         return self.nxgraph
 
-    def get_node_features(self):
-        return self.node_features
+    def get_node_inputs(self):
+        return self.node_inputs
 
-    def get_supports(self):
-        return self.supports
+    def get_node_inputs_num_nonzero(self):
+        return self.node_inputs[1].shape
 
-    def _preprocess_features(self, features):
+    def get_laplacians(self):
+        return self.laplacians
+
+    def _preprocess_inputs(self, inputs):
         """Row-normalize feature matrix and convert to tuple representation"""
-        rowsum = np.array(features.sum(1))
+        rowsum = np.array(inputs.sum(1))
         r_inv = np.power(rowsum, -1).flatten()
         r_inv[np.isinf(r_inv)] = 0.
         r_mat_inv = sp.diags(r_inv)
-        features = r_mat_inv.dot(features)
-        return self._sparse_to_tuple(features)
+        inputs = r_mat_inv.dot(inputs)
+        return self._sparse_to_tuple(inputs)
 
     def _preprocess_adj(self, adj):
         """Preprocessing of adjacency matrix and conversion to tuple representation."""

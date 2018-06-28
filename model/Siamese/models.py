@@ -1,9 +1,6 @@
 from layers_factory import create_layers, create_activation
-import sys
-from os.path import dirname, abspath
-
-sys.path.insert(0, "{}/../src".format(dirname(dirname(abspath(__file__)))))
 from similarity import create_sim_kernel
+from utils_siamese import get_phldr
 import tensorflow as tf
 
 
@@ -64,61 +61,74 @@ class GCNTN(Model):
     def __init__(self, FLAGS, placeholders, input_dim, **kwargs):
         super(GCNTN, self).__init__(**kwargs)
         self.FLAGS = FLAGS
-        self.placeholders = placeholders
-        self.inputs_1 = placeholders['features_1']
-        self.inputs_2 = placeholders['features_2']
-        self.support_1 = placeholders['support_1']
-        self.support_2 = placeholders['support_2']
-        self.num_supports = placeholders['num_supports']
-        self.num_features_1_nonzero = placeholders['num_features_1_nonzero']
-        self.num_features_2_nonzero = placeholders['num_features_2_nonzero']
-
+        self.phldr = placeholders
         self.input_dim = input_dim
-
+        self.batch_size = FLAGS.batch_size
         self.sim_kernel = create_sim_kernel(
             FLAGS.sim_kernel, FLAGS.yeta)
         self.final_act = create_activation(
-            FLAGS.final_act, self.sim_kernel, use_tf=False)
+            FLAGS.final_act, self.sim_kernel, use_tf=True)
         self.final_act_np = create_activation(
             FLAGS.final_act, self.sim_kernel, use_tf=False)
         self.loss_func = FLAGS.loss_func
         self.weight_decay = FLAGS.weight_decay
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)
+        self.optimizer = tf.train.AdamOptimizer(
+            learning_rate=FLAGS.learning_rate)
         print('input_dim', input_dim)
-
+        self.log = FLAGS.log
         self.build()
 
     def _build(self):
         with tf.variable_scope(self.name):
             self.layers = create_layers(self, self.FLAGS)
-        print('Created {} layers'.format(len(self.layers)))
+        print('Created {} layers: {}'.format(
+            len(self.layers), ','.join(l.get_name() for l in self.layers)))
 
-        # Build the siamese model.
-        self.activations_list = [[], []]
-        for i, inputs in enumerate([self.inputs_1, self.inputs_2]):
-            activations = self.activations_list[i]
-            activations.append(inputs)
-            assert (len(self.layers) >= 2)
-            for j in range(0, len(self.layers) - 1):
-                layer = self.layers[j]
-                inputs_to_layer = activations[-1]
-                if layer.__class__.__name__ == 'GraphConvolution':
-                    inputs_to_layer = \
-                        [inputs_to_layer,
-                         self._get_support(i),
-                         self._get_num_features_nonzero(i)]
-                print('Graph {} through layer {}:{}'.format(
-                    i + 1, j, layer.get_name()))
-                hidden = layer(inputs_to_layer)
-                activations.append(hidden)
-        merging_layer = self.layers[-1]
-        self.outputs = merging_layer(
-            [self.activations_list[0][-1], self.activations_list[1][-1]])
-        print('Merging graph 1 and 2 through {}'.format(
-            merging_layer.get_name()))
+        # Build the siamese model for train_val and test, respectively,
+        # because train_val involve batch_size, but test does not (only 1 pair).
+        for tvt in ['train_val', 'test']:
+            num_pairs = self.batch_size if tvt == 'train_val' else 1
+            force_no_logging = True if tvt == 'test' else False
+            graphs_embeddings = [[], []]
+            # Go through each graph pair.
+            for i in range(num_pairs):
+                activations_list = [[], []]
+                # Go through each layer.
+                for j, inputs in enumerate(
+                        [get_phldr(self.phldr, 'inputs_1', tvt)[i],
+                         get_phldr(self.phldr, 'inputs_2', tvt)[i]]):
+                    actvs = activations_list[j]
+                    actvs.append(inputs)
+                    assert (len(self.layers) >= 2)
+                    for k in range(0, len(self.layers) - 1):
+                        layer = self.layers[k]
+                        inputs_to_layer = actvs[-1]
+                        if layer.__class__.__name__ == 'GraphConvolution':
+                            inputs_to_layer = \
+                                [inputs_to_layer,
+                                 self._get_laplacians(i, j, tvt),
+                                 self._get_num_inputs_nonzero(i, j, tvt)]
+                        self._print_build_model(tvt, i, j, k, layer)
+                        hidden = layer(inputs_to_layer, force_no_logging)
+                        actvs.append(hidden)
+                    graphs_embeddings[j].append(activations_list[j][-1])
+            # Assume only the last layer is the merging layer, e.g. NTN, dot.
+            merging_layer = self.layers[-1]
+            embed_mat_1 = tf.stack(graphs_embeddings[0])
+            embed_mat_2 = tf.stack(graphs_embeddings[1])
+            outputs = merging_layer([embed_mat_1, embed_mat_2], force_no_logging)
+            if tvt == 'train_val':
+                self.outputs = outputs
+            else:
+                self.test_output = outputs
+            assert (self.outputs.get_shape()[0] == self.batch_size)
+        if self.log:
+            print('Merging graph 1 and 2 through {}'.format(
+                merging_layer.get_name()))
 
         # Store model variables for easy access
-        variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.name)
+        variables = tf.get_collection(
+            tf.GraphKeys.GLOBAL_VARIABLES, scope=self.name)
         self.vars = {var.name: var for var in variables}
 
     def _loss(self):
@@ -132,54 +142,60 @@ class GCNTN(Model):
         if self.loss_func == 'mse':
             # L2 loss.
             self.temp = self.pred_sim  # TODO: investigate
-            l2_loss = tf.nn.l2_loss( \
-                self.sim_kernel.dist_to_sim_tf(self._get_dist()) - \
-                self.pred_sim())
+            l2_loss = tf.nn.l2_loss(
+                self.sim_kernel.dist_to_sim_tf(self._get_dist()) -
+                self.pred_sim()) / self.batch_size
             self.loss += l2_loss
             tf.summary.scalar('l2_loss', l2_loss)
         else:
             raise RuntimeError('Unknown loss function {}'.format(self.loss_func))
         tf.summary.scalar('total_loss', self.loss)
 
-    def _rank_loss(self, gamma):
-        y_pred = self.pred_sim()
-        pos_interact_score = y_pred[
-                             :FLAGS.batch_size_p]  # need set new flag for positive sample number & assume pred is a vector
-        neg_interact_score = y_pred[FLAGS.batch_size_p:]
-        diff_mat = tf.reshape(tf.tile(pos_interact_score, [FLAGS.num_negatives]),
-                              # need set new flag for negative sampling
-                              (-1,
-                               1)) - neg_interact_score  # assume negative sampling is conducted in this way: p+n1+n2+..+nk
-        rank_loss = tf.reduce_mean(-tf.log(tf.sigmoid(gamma * diff_mat)))
-        return rank_loss
+    # def _rank_loss(self, gamma):
+    #     y_pred = self.pred_sim()
+    #     pos_interact_score = y_pred[
+    #                          :FLAGS.batch_size_p]  # need set new flag for positive sample number & assume pred is a vector
+    #     neg_interact_score = y_pred[FLAGS.batch_size_p:]
+    #     diff_mat = tf.reshape(tf.tile(pos_interact_score, [FLAGS.num_negatives]),
+    #                           # need set new flag for negative sampling
+    #                           (-1,
+    #                            1)) - neg_interact_score  # assume negative sampling is conducted in this way: p+n1+n2+..+nk
+    #     rank_loss = tf.reduce_mean(-tf.log(tf.sigmoid(gamma * diff_mat)))
+    #     return rank_loss
 
     def pred_sim(self):
         return self.final_act(self.outputs)
 
     def pred_sim_without_act(self):
-        return self.outputs
+        return self.test_output
 
     def apply_final_act_np(self, score):
         return self.final_act_np(score)
 
-    def _get_support(self, i):
-        if i == 0:
-            return self.support_1
-        elif i == 1:
-            return self.support_2
+    def _get_laplacians(self, i, j, tvt):
+        if j == 0:
+            return get_phldr(self.phldr, 'laplacians_1', tvt)[i]
+        elif j == 1:
+            return get_phldr(self.phldr, 'laplacians_2', tvt)[i]
         else:
             assert (False)
 
-    def _get_num_features_nonzero(self, i):
-        if i == 0:
-            return self.num_features_1_nonzero
-        elif i == 1:
-            return self.num_features_2_nonzero
+    def _get_num_inputs_nonzero(self, i, j, tvt):
+        if j == 0:
+            return get_phldr(self.phldr, 'num_inputs_1_nonzero', tvt)[i]
+        elif j == 1:
+            return get_phldr(self.phldr, 'num_inputs_2_nonzero', tvt)[i]
         else:
             assert (False)
 
     def _get_dist(self):
-        if self.FLAGS.norm_dist:
-            return self.placeholders['norm_dist']
+        if self.FLAGS.dist_norm:
+            return self.phldr['norm_dists']
         else:
-            return self.placeholders['dist']
+            return self.phldr['dists']
+
+    def _print_build_model(self, tvt, i, j, k, layer):
+        if self.log:
+            print('{} Batch index {} graph {} through layer {}:{}'.format(
+                tvt, i + 1, j + 1, k + 1, layer.get_name()))
+            self.printed_build_model = True

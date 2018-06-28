@@ -7,7 +7,7 @@ from glob import glob
 
 
 class Data(object):
-    def __init__(self, name_str, FLAGS=None):
+    def __init__(self, name_str):
         name = self.__class__.__name__ + '_' + name_str + self.name_suffix()
         self.name = name
         sfn = self.save_filename()
@@ -16,9 +16,12 @@ class Data(object):
             self.__dict__ = temp
             print('%s loaded from %s' % (name, sfn))
         else:
-            self.init(FLAGS)
+            self.init()
             save(sfn, self.__dict__)
             print('%s saved to %s' % (name, sfn))
+
+    def init(self):
+        raise NotImplementedError()
 
     def name_suffix(self):
         return ''
@@ -31,6 +34,9 @@ class Data(object):
 
 
 class SynData(Data):
+    train_num_graphs = 20
+    test_num_graphs = 10
+
     def __init__(self, train):
         if train:
             self.num_graphs = SynData.train_num_graphs
@@ -38,7 +44,7 @@ class SynData(Data):
             self.num_graphs = SynData.test_num_graphs
         super().__init__(get_train_str(train))
 
-    def init(self, *unused):
+    def init(self):
         self.graphs = []
         for i in range(self.num_graphs):
             n = randint(5, 20)
@@ -47,8 +53,6 @@ class SynData(Data):
             g.graph['gid'] = i
             self.graphs.append(g)
         print('Randomly generated %s graphs' % self.num_graphs)
-        if self.train:
-            self.train_train_dist = self.get_dist_mat(self.graphs, self.graphs)
 
     def name_suffix(self):
         return '_{}_{}'.format(SynData.train_num_graphs,
@@ -60,9 +64,9 @@ class AIDSData(Data):
         self.train = train
         super().__init__(get_train_str(train))
 
-    def init(self, *unused):
+    def init(self):
         self.graphs = []
-        datadir = '{}/{}/{}'.format( \
+        datadir = '{}/{}/{}'.format(
             get_data_path(), self.get_folder_name(), 'train' if self.train \
                 else 'test')
         for file in self.sort()(glob(datadir + '/*.gexf')):
@@ -73,6 +77,20 @@ class AIDSData(Data):
             if not nx.is_connected(g):
                 raise RuntimeError('{} not connected'.format(gid))
         print('Loaded {} graphs from {}'.format(len(self.graphs), datadir))
+        if 'nef' in self.get_folder_name():
+            print('Removing edge features')
+            for g in self.graphs:
+                self._remove_valence(g)
+
+    def get_folder_name(self):
+        raise NotImplementedError()
+
+    def sort(self):
+        raise NotImplementedError()
+
+    def _remove_valence(self, g):
+        for n1, n2, d in g.edges(data=True):
+            d.pop('valence', None)
 
 
 class AIDS10kData(AIDSData):
@@ -82,40 +100,17 @@ class AIDS10kData(AIDSData):
     def sort(self):
         return sorted_nicely
 
-    def _remove_valence(self, g):
-        for n1, n2, d in g.edges(data=True):
-            d.pop('valence', None)
-
 
 class AIDS10kNEFData(AIDS10kData):
-    def init(self, *unused):
+    def init(self):
         self.graphs = AIDS10kData(self.train).graphs
         for g in self.graphs:
             self._remove_valence(g)
         print('Processed {} graphs: valence removed'.format(len(self.graphs)))
 
 
-class AIDS10kSmallData(AIDSData):
-    def get_folder_name(self):
-        return 'AIDS10k_small'
-
-    def sort(self):
-        return self.fake_sort
-
-    def fake_sort(self, x):
-        return x
-
-
-class AIDS50Data(AIDSData):
-    def get_folder_name(self):
-        return 'AIDS50'
-
-    def sort(self):
-        return sorted_nicely
-
-
 class AIDS50NEFData(AIDS10kData):
-    def init(self, *unused):
+    def init(self):
         self.graphs = []
         for g in AIDS10kData(self.train).graphs:
             if g.number_of_nodes() <= 12:
@@ -130,6 +125,20 @@ class AIDS50NEFData(AIDS10kData):
         print('Processed {} graphs: valence removed'.format(len(self.graphs)))
 
 
+class AIDS700nefData(AIDSData):
+    def get_folder_name(self):
+        return 'AIDS700nef'
+
+    def sort(self):
+        return sorted_nicely
+
+    def _remove_valence(self, g):
+        for n1, n2, d in g.edges(data=True):
+            d.pop('valence', None)
+
+
 if __name__ == '__main__':
     from utils import load_data
-    data = load_data('aids50nef', True)
+    data = load_data('aids700nef', False)
+    for g in data.graphs:
+        print(g.graph['gid'])

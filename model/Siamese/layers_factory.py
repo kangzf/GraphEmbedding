@@ -1,4 +1,4 @@
-from layers import GraphConvolution, Average, NTN
+from layers import GraphConvolution, Average, NTN, Dot
 import tensorflow as tf
 import numpy as np
 from math import exp
@@ -19,9 +19,11 @@ def create_layers(model, FLAGS):
         if name == 'GraphConvolution':
             layers.append(create_GraphConvolution_layer(layer_info, model, i))
         elif name == 'Average':
-            layers.append(create_Average_layer(layer_info))
+            layers.append(create_Average_layer(layer_info, model))
         elif name == 'NTN':
             layers.append(create_NTN_layer(layer_info, model))
+        elif name == 'Dot':
+            layers.append(create_Dot_layer(layer_info, model))
         else:
             raise RuntimeError('Unknown layer {}'.format(name))
     return layers
@@ -41,7 +43,7 @@ def create_GraphConvolution_layer(layer_info, model, layer_id):
     return GraphConvolution(
         input_dim=input_dim,
         output_dim=int(layer_info['output_dim']),
-        placeholders=model.placeholders,
+        placeholders=model.phldr,
         dropout=parse_as_bool(layer_info['dropout']),
         sparse_inputs=parse_as_bool(layer_info['sparse_inputs']),
         act=create_activation(layer_info['act']),
@@ -51,10 +53,10 @@ def create_GraphConvolution_layer(layer_info, model, layer_id):
         logging=model.logging)
 
 
-def create_Average_layer(layer_info):
-    if not len(layer_info) <= 0:
+def create_Average_layer(layer_info, model):
+    if not len(layer_info) == 0:
         raise RuntimeError('Average layer must have 0 specs')
-    return Average()
+    return Average(logging=model.logging)
 
 
 def create_NTN_layer(layer_info, model):
@@ -63,12 +65,16 @@ def create_NTN_layer(layer_info, model):
     return NTN(
         input_dim=int(layer_info['input_dim']),
         feature_map_dim=int(layer_info['feature_map_dim']),
-        placeholders=model.placeholders,
+        placeholders=model.phldr,
         dropout=parse_as_bool(layer_info['dropout']),
         inneract=create_activation(layer_info['inneract']),
         bias=parse_as_bool(layer_info['bias']),
         logging=model.logging)
 
+def create_Dot_layer(layer_info, model):
+    if not len(layer_info) == 0:
+        raise RuntimeError('Dot layer must have 0 specs')
+    return Dot(logging=model.logging)
 
 def create_activation(act, sim_kernel=None, use_tf=True):
     if act == 'relu':
@@ -80,13 +86,14 @@ def create_activation(act, sim_kernel=None, use_tf=True):
     elif act == 'tanh':
         return tf.tanh if use_tf else np.tanh
     elif act == 'sim_kernel':
-        return sim_kernel.dist_to_sim_tf if use_tf else sim_kernel.dist_to_sim_np
+        return sim_kernel.dist_to_sim_tf if use_tf else \
+            sim_kernel.dist_to_sim_np
     else:
         raise RuntimeError('Unknown activation function {}'.format(act))
 
 
 def relu_np(x):
-    return np.maximum(x, 0, x)
+    return np.maximum(x, 0)
 
 
 def identity_np(x):

@@ -8,6 +8,7 @@ from distance import ged
 from similarity import create_sim_kernel
 from results import load_results_as_dict, load_result
 import networkx as nx
+from random import choice
 
 check_nx_version()
 import multiprocessing as mp
@@ -18,6 +19,8 @@ import numpy as np
 from pandas import read_csv
 import matplotlib.pyplot as plt
 import matplotlib
+
+matplotlib.rc('font', **{'family': 'serif', 'size': 22})
 from vis import vis
 
 BASELINE_MODELS = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
@@ -25,9 +28,6 @@ BASELINE_MODELS = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
 TRUE_MODEL = 'beam80'
 
 """ Plotting. """
-font = {'family': 'serif',
-        'size': 22}
-matplotlib.rc('font', **font)
 args1 = {'astar': {'color': 'grey'},
          'beam5': {'color': 'deeppink'},
          'beam10': {'color': 'b'},
@@ -37,7 +37,8 @@ args1 = {'astar': {'color': 'grey'},
          'hungarian': {'color': 'deepskyblue'},
          'vj': {'color': 'darkcyan'},
          'graph2vec': {'color': 'darkcyan'},
-         'siamese_gcntn': {'color': 'red'}}
+         'siamese_gcntn': {'color': 'red'},
+         'transductive': {'color': 'red'}}
 args2 = {'astar': {'marker': '*', 'facecolors': 'none', 'edgecolors': 'grey'},
          'beam5': {'marker': '|', 'facecolors': 'deeppink'},
          'beam10': {'marker': '_', 'facecolors': 'b'},
@@ -52,8 +53,10 @@ args2 = {'astar': {'marker': '*', 'facecolors': 'none', 'edgecolors': 'grey'},
                 'edgecolors': 'darkcyan'},
          'graph2vec': {'marker': 'h', 'facecolors': 'none',
                        'edgecolors': 'darkcyan'},
-         'siamese_gcntn': {'marker': 'P', \
-                           'facecolors': 'none', 'edgecolors': 'red'}
+         'siamese_gcntn': {'marker': 'P',
+                           'facecolors': 'none', 'edgecolors': 'red'},
+         'transductive': {'marker': 'P',
+                          'facecolors': 'none', 'edgecolors': 'red'}
          }
 
 
@@ -172,7 +175,7 @@ def exp3():
         if model == 'astar':
             continue
         plt.scatter(data['g2_node'], data['time_' + model], s=150, label=model,
-                    **args2[model])
+                    **get_plotting_arg(args2, model))
     plt.xlabel('# nodes of graph 2')
     plt.ylabel('time (sec)')
     plt.legend(loc='best')
@@ -201,8 +204,7 @@ def exp4():
     row_graphs = load_data(dataset, train=False)
     col_graphs = load_data(dataset, train=True)
     model = prompt('Which model?')
-    if model != 'astar':
-        exec_turnoff_print()
+    exec_turnoff_print()
     num_cpu = prompt_get_cpu()
     real_dataset_run_helper(dataset, model, row_graphs, col_graphs, num_cpu)
 
@@ -291,8 +293,8 @@ def plot_ged_time_helper(dataset, models, metric, rs):
         mat = rs[model].mat(metric.name, norm=True)
         print('plotting for {}'.format(model))
         ys = np.mean(mat, 1)[so]
-        plt.plot(xs, ys, **args1[model])
-        plt.scatter(xs, ys, s=200, label=model, **args2[model])
+        plt.plot(xs, ys, **get_plotting_arg(args1, model))
+        plt.scatter(xs, ys, s=200, label=model, **get_plotting_arg(args2, model))
     plt.xlabel('query graph size')
     ax = plt.gca()
     ax.set_xticks(xs)
@@ -305,6 +307,12 @@ def plot_ged_time_helper(dataset, models, metric, rs):
         dataset, metric, metric, dataset, '_'.join(models))
     plt.savefig(sp)
     print('Saved to {}'.format(sp))
+
+
+def get_plotting_arg(args, model):
+    for k, v in args.items():
+        if k in model:
+            return v
 
 
 def get_test_graph_sizes(dataset):
@@ -348,22 +356,24 @@ def plot_apk(dataset, models, rs, true_result, metric, norms, plot_results=True)
 def plot_apk_helper(dataset, models, rs, true_result, metric, norm, ks,
                     logscale, plot_results):
     print_ids = []
-    rtn = {}
+    numbers = {}
     for model in models:
         aps = precision_at_ks(true_result, rs[model], norm, ks, print_ids)
-        rtn[model] = {'ks': ks, 'aps': aps}
+        numbers[model] = {'ks': ks, 'aps': aps}
         # print('aps {}: {}'.format(model, aps))
-    rtn = {'apk{}'.format(get_norm_str(norm)): rtn}
+    rtn = {'apk{}'.format(get_norm_str(norm)): numbers}
     if not plot_results:
         return rtn
     plt.figure(figsize=(16, 10))
     for model in models:
+        ks = numbers[model]['ks']
+        aps = numbers[model]['aps']
         if logscale:
             pltfunc = plt.semilogx
         else:
             pltfunc = plt.plot
-        pltfunc(ks, aps, **args1[model])
-        plt.scatter(ks, aps, s=200, label=model, **args2[model])
+        pltfunc(ks, aps, **get_plotting_arg(args1, model))
+        plt.scatter(ks, aps, s=200, label=model, **get_plotting_arg(args2, model))
     plt.xlabel('k')
     # ax = plt.gca()
     # ax.set_xticks(ks)
@@ -445,7 +455,7 @@ def plot_mrr_mse_time_helper(dataset, models, rs, true_result, metric, norm,
     width = 0.35  # the width of the bars
     bars = plt.bar(ind, mrr_mse_list, width)
     for i, bar in enumerate(bars):
-        bar.set_color(args1[models[i]]['color'])
+        bar.set_color(get_plotting_arg(args1, models[i])['color'])
     autolabel(bars)
     plt.xlabel('model')
     plt.xticks(ind, models)
@@ -571,7 +581,7 @@ def get_graph_stats_text(g):
 
 def exp9():
     """ Check similarity kernel. """
-    dataset = 'aids50'
+    dataset = 'aids50nef'
     model = 'beam80'
     sim_kernel_name = 'gaussian'
     norms = [True, False]
@@ -606,7 +616,7 @@ def plot_sim_kernel(dataset, result, sim_kernels, norm):
         for i in range(m):
             for j in range(n):
                 d = ged_mat[i][j]
-                plt.scatter(ged_mat[i][j], sim_kernel.dist_to_sim(d), s=100)
+                plt.scatter(ged_mat[i][j], sim_kernel.dist_to_sim_np(d), s=100)
         # Plot the function.
         xs, ys = get_sim_kernel_points(ged_mat, sim_kernel)
         plt.plot(xs, ys, label=sim_kernel.name())
@@ -630,8 +640,32 @@ def get_sim_kernel_points(ged_mat, sim_kernel):
     while i < np.amax(ged_mat) * 1.05:
         xs.append(i)
         i += 0.1
-    ys = [sim_kernel.dist_to_sim(x) for x in xs]
+    ys = [sim_kernel.dist_to_sim_np(x) for x in xs]
     return xs, ys
+
+
+def exp10():
+    """ Check symmetry of GED. """
+    exec_turnoff_print()
+    train_data = load_data('aids50nef', train=True)
+    for i in range(10000):
+        g1 = choice(train_data.graphs)
+        g2 = choice(train_data.graphs)
+        if g1.number_of_nodes() <= 10 and g2.number_of_nodes() <= 10:
+            print(g1.number_of_nodes(), g2.number_of_nodes(), g1.number_of_edges(), g2.number_of_edges())
+            algo = 'astar'
+            print(algo)
+            d = ged(g1, g2, algo)
+            print( g1.graph['gid'], g2.graph['gid'], d)
+            d = ged(g2, g1, algo)
+            print(g2.graph['gid'], g1.graph['gid'], d)
+            algo = 'beam80'
+            print(algo)
+            d = ged(g1, g2, algo)
+            print(g1.graph['gid'], g2.graph['gid'], d)
+            d = ged(g2, g1, algo)
+            print(g2.graph['gid'], g1.graph['gid'], d)
+            print()
 
 
 if __name__ == '__main__':

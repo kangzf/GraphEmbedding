@@ -1,7 +1,3 @@
-import sys
-from os.path import dirname, abspath
-
-sys.path.insert(0, "{}/../src".format(dirname(dirname(abspath(__file__)))))
 from utils import get_save_path, save, load
 from distance import ged, normalized_dist
 from collections import OrderedDict
@@ -31,7 +27,7 @@ class DistCalculator(object):
         gid2 = g2.graph['gid']
         pair = (gid1, gid2)
         d = self.gidpair_dist_map.get(pair)
-        if not d:
+        if d is None:
             rev_pair = (gid2, gid1)
             rev_d = self.gidpair_dist_map.get(rev_pair)
             if rev_d:

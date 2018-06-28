@@ -1,5 +1,5 @@
 from utils_siamese import print_msec
-from eval_siamese import Eval
+from eval import Eval
 from time import time
 import numpy as np
 
@@ -34,7 +34,8 @@ def train_val(FLAGS, data, placeholders, dist_calculator, model, saver, sess):
 
         if FLAGS.early_stopping:
             if iter > FLAGS.early_stopping and \
-                    val_costs[-1] > np.mean(val_costs[-(FLAGS.early_stopping + 1):-1]):
+                    val_costs[-1] > \
+                    np.mean(val_costs[-(FLAGS.early_stopping + 1):-1]):
                 print('Early stopping...')
                 break
 
@@ -56,10 +57,11 @@ def test(FLAGS, data, placeholders, dist_calculator, model, saver, sess):
             sim_i_j, test_time = run_tf(
                 FLAGS, data, placeholders, dist_calculator, model, saver, sess,
                 'test', i, j)
+            sim_i_j = sim_i_j[0]
             test_time *= 1000
+            true_sim = eval.get_true_sim(i, j, FLAGS.dist_norm)
             print('{},{},{:.2f}mec,{:.4f},{:.4f}'.format(
-                i, j, test_time, sim_i_j,
-                eval.get_true_sim(i, j, FLAGS.norm_dist)))
+                i, j, test_time, sim_i_j, true_sim))
             # assert (0 <= sim_i_j <= 1)
             test_sim_mat[i][i] = sim_i_j
             test_time_mat[i][j] = test_time
