@@ -5,8 +5,9 @@ from collections import OrderedDict
 
 class DistCalculator(object):
     def __init__(self, dataset, dist_metric, algo):
-        self.sfn = '{}/{}_{}_{}_gidpair_dist_map'.format( \
-            get_save_path(), dataset, dist_metric, algo)
+        self.sfn = '{}/{}_{}_{}{}_gidpair_dist_map'.format(
+            get_save_path(), dataset, dist_metric, algo,
+            '' if algo == 'astar' else '_revtakemin')
         self.algo = algo
         self.gidpair_dist_map = load(self.sfn)
         if not self.gidpair_dist_map:
@@ -34,8 +35,10 @@ class DistCalculator(object):
                 d = rev_d
             else:
                 d = self.dist_func(g1, g2, self.algo)
+                # if self.algo != 'astar':
+                #     d = min(d, self.dist_func(g2, g1, self.algo))
             self.gidpair_dist_map[pair] = d
-            print('{}Adding entry ({}, {}) to dist map'.format( \
+            print('{}Adding entry ({}, {}) to dist map'.format(
                 ' ' * 80, pair, d))
             save(self.sfn, self.gidpair_dist_map)
         return d, normalized_dist(d, g1, g2)
