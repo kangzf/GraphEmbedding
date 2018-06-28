@@ -57,7 +57,7 @@ def load_train_test_joint_sim_mat():
 
 
 def perform_svd(mat, dim):
-    u, s, v = sp.linalg.svds(mat, dim, return_singular_vectors="u")
+    u, s, v = sp.linalg.svds(mat, dim, return_singular_vectors='u')
     # return U \Sigma^{1/2}
     return sp.diags(np.sqrt(s)).dot(u.T).T
 

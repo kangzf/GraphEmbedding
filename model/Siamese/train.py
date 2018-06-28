@@ -45,7 +45,8 @@ def train_val(FLAGS, data, placeholders, dist_calculator, model, saver, sess):
 
 def test(FLAGS, data, placeholders, dist_calculator, model, saver, sess):
     # Test.
-    eval = Eval(FLAGS.dataset, FLAGS.sim_kernel, FLAGS.yeta, FLAGS.plot_results)
+    eval = Eval(FLAGS.dataset, FLAGS.dist_algo,
+                FLAGS.sim_kernel, FLAGS.yeta, FLAGS.plot_results)
     m, n = data.m_n()
     test_sim_mat = np.zeros((m, n))
     test_time_mat = np.zeros((m, n))

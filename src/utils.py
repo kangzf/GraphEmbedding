@@ -25,13 +25,12 @@ def load_data(data, train):
     elif data == 'aids10knef':
         from data import AIDS10kNEFData
         return AIDS10kNEFData(train)
-    elif data == 'aids50nef':
-        from data import AIDS50NEFData
-        return AIDS50NEFData(train)
     elif data == 'aids700nef':
         from data import AIDS700nefData
         return AIDS700nefData(train)
-
+    elif data == 'aids80nef':
+        from data import AIDS80nefData
+        return AIDS80nefData(train)
     else:
         raise RuntimeError('Not recognized data %s' % data)
 

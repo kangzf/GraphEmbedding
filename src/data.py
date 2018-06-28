@@ -109,22 +109,6 @@ class AIDS10kNEFData(AIDS10kData):
         print('Processed {} graphs: valence removed'.format(len(self.graphs)))
 
 
-class AIDS50NEFData(AIDS10kData):
-    def init(self):
-        self.graphs = []
-        for g in AIDS10kData(self.train).graphs:
-            if g.number_of_nodes() <= 12:
-                self.graphs.append(g)
-        random.Random(123).shuffle(self.graphs)
-        if self.train:
-            self.graphs = self.graphs[0:50]
-        else:
-            self.graphs = self.graphs[0:10]
-        for g in self.graphs:
-            self._remove_valence(g)
-        print('Processed {} graphs: valence removed'.format(len(self.graphs)))
-
-
 class AIDS700nefData(AIDSData):
     def get_folder_name(self):
         return 'AIDS700nef'
@@ -137,8 +121,20 @@ class AIDS700nefData(AIDSData):
             d.pop('valence', None)
 
 
+class AIDS80nefData(AIDS700nefData):
+    def init(self):
+        self.graphs = AIDS700nefData(self.train).graphs
+        random.Random(123).shuffle(self.graphs)
+        if self.train:
+            self.graphs = self.graphs[0:70]
+        else:
+            self.graphs = self.graphs[0:10]
+        print('Loaded {} graphs: valence removed'.format(len(self.graphs)))
+
+
 if __name__ == '__main__':
     from utils import load_data
-    data = load_data('aids700nef', False)
+
+    data = load_data('aids80nef', True)
     for g in data.graphs:
         print(g.graph['gid'])

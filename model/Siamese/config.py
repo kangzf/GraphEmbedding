@@ -4,8 +4,8 @@ import tensorflow as tf
 flags = tf.app.flags
 
 # For data preprocessing.
-""" dataset: aids50nef, aids700nef, aids10knef. """
-flags.DEFINE_string('dataset', 'aids700nef', 'Dataset string.')
+""" dataset: aids80nef, aids700nef, aids10knef. """
+flags.DEFINE_string('dataset', 'aids80nef', 'Dataset string.')
 """ valid_percentage: (0, 1). """
 flags.DEFINE_float('valid_percentage', 0.4,
                    '(# validation graphs) / (# validation + # training graphs.')
@@ -53,13 +53,13 @@ flags.DEFINE_string(
 flags.DEFINE_string(
     'layer_2',
     'Average', '')
-# flags.DEFINE_string(
-#     'layer_3',
-#     'NTN:input_dim=16,feature_map_dim=10,inneract=relu,'
-#     'dropout=True,bias=True', '')
 flags.DEFINE_string(
     'layer_3',
-    'Dot', '')
+    'NTN:input_dim=16,feature_map_dim=10,inneract=relu,'
+    'dropout=True,bias=True', '')
+# flags.DEFINE_string(
+#     'layer_3',
+#     'Dot', '')
 flags.DEFINE_integer('batch_size', 20, 'Number of graph pairs in a batch.')  # TODO: implement
 """ dist_norm: True, False. """
 flags.DEFINE_boolean('dist_norm', True,
@@ -84,7 +84,7 @@ flags.DEFINE_float('weight_decay', 5e-4,
 flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
 
 # For training and validating.
-flags.DEFINE_integer('iters', 500, 'Number of iterations to train.')
+flags.DEFINE_integer('iters', 20, 'Number of iterations to train.')
 """ early_stopping: None for no early stopping. """
 flags.DEFINE_integer('early_stopping', None,
                      'Tolerance for early stopping (# of iters).')

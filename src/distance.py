@@ -33,8 +33,11 @@ def ged(g1, g2, algo, debug=False, timeit=False):
     prop_file = setup_property_file(src, gp, meta1, append_str)
     rtn = []
     if not exec(
-            'cd {} && java -classpath {}/src/graph-matching-toolkit/bin algorithms.GraphMatching ./properties/properties_temp_{}.prop'.format(
-                gp, get_root_path(), append_str)):
+            'cd {} && java {}'
+            ' -classpath {}/src/graph-matching-toolkit/bin algorithms.GraphMatching '
+            './properties/properties_temp_{}.prop'.format(
+                gp, '-XX:-UseGCOverheadLimit -XX:+UseConcMarkSweepGC -Xmx50g'
+                if algo == 'astar' else '', get_root_path(), append_str)):
         rtn.append(-1)
     else:
         d, t, lcnt, g1size, g2size, result_file = get_result(gp, algo, append_str)
