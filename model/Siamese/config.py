@@ -24,8 +24,8 @@ flags.DEFINE_string('dist_metric', 'ged', 'Distance metric to use.')
 """ dist_algo: beam80, astar for ged. """
 flags.DEFINE_string('dist_algo', 'astar',
                     'Ground-truth distance algorithm to use.')
-""" sampler: random. """  # TODO: density
-flags.DEFINE_string('sampler', 'random', 'Sampler to use.')
+""" sampler: random, density """
+flags.DEFINE_string('sampler', 'density', 'Sampler to use.')
 """ sample_num: 1, 2, 3, ..., -1 (infinite/continuous sampling). """
 flags.DEFINE_integer('sample_num', -1,
                      'Number of pairs to sample for training.')

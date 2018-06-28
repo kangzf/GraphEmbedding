@@ -1,7 +1,7 @@
 from data import Data
 from utils import load_data, exec_turnoff_print
 from utils_siamese import get_phldr
-from samplers import RandomSampler
+from samplers import RandomSampler, DistributionSampler
 from sklearn.preprocessing import OneHotEncoder
 import scipy.sparse as sp
 import numpy as np
@@ -186,6 +186,9 @@ class ModelGraphList(object):
         self.gs = [ModelGraph(g, node_feat_encoder) for g in gs]
         if sampler == 'random':
             self.sampler = RandomSampler(
+                self.gs, sample_num, sampler_duplicate_removal)
+        elif sampler == 'density':
+            self.sampler = DistributionSampler(
                 self.gs, sample_num, sampler_duplicate_removal)
         else:
             raise RuntimeError('Unknown sampler {}'.format(sampler))
