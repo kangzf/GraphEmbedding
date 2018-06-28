@@ -16,12 +16,15 @@ from time import time
 from random import randint, uniform
 import numpy as np
 # Comment out for qilin. The following packages are not installed on the server.
+# Note: qilin can only afford 10 cpus if astar is used,
+#       because astar needs more memory allocation.
 from pandas import read_csv
 import matplotlib.pyplot as plt
 import matplotlib
 
 matplotlib.rc('font', **{'family': 'serif', 'size': 22})
 from vis import vis
+# End of commenting out for qilin.
 
 BASELINE_MODELS = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
                    'hungarian', 'vj']

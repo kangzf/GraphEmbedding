@@ -222,7 +222,6 @@ class NTN(Layer):
         if self.logging:
             self._log_vars()
 
-
     def _call(self, inputs):
         x_1 = inputs[0]
         x_2 = inputs[1]
@@ -231,15 +230,25 @@ class NTN(Layer):
         x_1 = tf.nn.dropout(x_1, 1 - self.dropout)
         x_2 = tf.nn.dropout(x_2, 1 - self.dropout)
 
-        temp = tf.einsum('ij,ajk->iak', x_1, self.vars['weights_W'])
-        h = tf.squeeze(tf.matmul(temp, tf.expand_dims(x_2, 2)))
-        V_out = tf.matmul(tf.concat([x_1, x_2], 1), tf.transpose(self.vars['weights_V']))
-        tensor_bi_product = V_out + h
-        if self.bias:
-            tensor_bi_product += self.vars['bias']
-        tensor_bi_product = self.act(tensor_bi_product)
-        # output: batch_size * 1
-        output = tf.matmul(tensor_bi_product, self.vars['weights_U'])
+        # one pair comparison
+        x_1 = tf.reshape(x_1, [1, -1])
+        x_2 = tf.reshape(x_2, [1, -1])
+
+        feature_map = []
+        for i in range(self.feature_map_dim):
+            V_out = tf.matmul(tf.reshape(self.vars['weights_V'][i], [1, -1]),
+                              tf.concat([tf.transpose(x_1), tf.transpose(x_2)], 0))
+            temp = tf.matmul(x_1, self.vars['weights_W'][:, :, i])
+            h = tf.reduce_sum(temp * x_2)  # h = K.sum(temp*e2,axis=1)
+            middle = V_out + h
+            if self.bias:
+                middle += self.vars['bias'][i]
+            feature_map.append(middle)
+
+        tensor_bi_product = tf.stack(feature_map)  # axis=0
+        tensor_bi_product = self.inneract(tensor_bi_product)
+
+        output = tf.reduce_sum(self.vars['weights_U'] * tensor_bi_product)
 
         return output
 
@@ -253,7 +262,7 @@ class Dot(Layer):
     def _call(self, inputs):
         x_1 = inputs[0]
         x_2 = inputs[1]
-        return tf.diag_part(tf.matmul(x_1, x_2, transpose_b=True))
+        return tf.reduce_sum(tf.multiply(x_1, x_2))
 
 
 # global unique layer ID dictionary for layer name assignment

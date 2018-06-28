@@ -89,17 +89,18 @@ class GCNTN(Model):
         for tvt in ['train_val', 'test']:
             num_pairs = self.batch_size if tvt == 'train_val' else 1
             force_no_logging = True if tvt == 'test' else False
-            graphs_embeddings = [[], []]
+            preds = []
             # Go through each graph pair.
             for i in range(num_pairs):
-                activations_list = [[], []]
-                # Go through each layer.
+                actvs_two = [[], []]
+                # Go through each graph.
                 for j, inputs in enumerate(
                         [get_phldr(self.phldr, 'inputs_1', tvt)[i],
                          get_phldr(self.phldr, 'inputs_2', tvt)[i]]):
-                    actvs = activations_list[j]
+                    actvs = actvs_two[j]
                     actvs.append(inputs)
                     assert (len(self.layers) >= 2)
+                    # Go through each layer except the last one.
                     for k in range(0, len(self.layers) - 1):
                         layer = self.layers[k]
                         inputs_to_layer = actvs[-1]
@@ -111,22 +112,23 @@ class GCNTN(Model):
                         self._print_build_model(tvt, i, j, k, layer)
                         hidden = layer(inputs_to_layer, force_no_logging)
                         actvs.append(hidden)
-                    graphs_embeddings[j].append(activations_list[j][-1])
-            # Assume only the last layer is the merging layer, e.g. NTN, dot.
-            merging_layer = self.layers[-1]
-            embed_mat_1 = tf.stack(graphs_embeddings[0])
-            embed_mat_2 = tf.stack(graphs_embeddings[1])
-            outputs = merging_layer([embed_mat_1, embed_mat_2], force_no_logging)
+                # Assume the last layer is (and only the last layer is)
+                # the merging layer, e.g. NTN, dot.
+                merging_layer = self.layers[-1]
+                if self.log:
+                    print('Merging graph 1 and 2 through {}'.format(
+                        merging_layer.get_name()))
+                pred = merging_layer(
+                    [actvs_two[0][-1], actvs_two[1][-1]], force_no_logging)
+                preds.append(pred)
+            outputs = tf.stack(preds)
             if tvt == 'train_val':
                 self.outputs = outputs
             else:
                 self.test_output = outputs
             assert (self.outputs.get_shape()[0] == self.batch_size)
-        if self.log:
-            print('Merging graph 1 and 2 through {}'.format(
-                merging_layer.get_name()))
 
-        # Store model variables for easy access
+        # Store model variables for easy access.
         variables = tf.get_collection(
             tf.GraphKeys.GLOBAL_VARIABLES, scope=self.name)
         self.vars = {var.name: var for var in variables}

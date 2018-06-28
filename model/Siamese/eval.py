@@ -1,16 +1,17 @@
-from exp import BASELINE_MODELS, TRUE_MODEL, plot_apk, plot_mrr_mse_time
+from exp import BASELINE_MODELS, plot_apk, plot_mrr_mse_time
 from results import load_results_as_dict, load_result
 
 
 class Eval(object):
-    def __init__(self, dataset, sim_kernel_name, yeta, plot_results):
+    def __init__(self, dataset, true_model,
+                 sim_kernel_name, yeta, plot_results):
         self.dataset = dataset
         if plot_results:
             self.models = BASELINE_MODELS
         else:
-            self.models = [TRUE_MODEL]
+            self.models = [true_model]
         self.rs = load_results_as_dict(dataset, self.models)
-        self.true_result = self.rs[TRUE_MODEL]
+        self.true_result = self.rs[true_model]
         self.sim_kernel_name = sim_kernel_name
         self.yeta = yeta
         self.results = {}
