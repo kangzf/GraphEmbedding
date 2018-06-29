@@ -21,6 +21,9 @@ class ModelGraphList(object):
     def get_graph_pair(self):
         return self.sampler.get_pair()
 
+    def get_triple_for_hinge_loss(self):
+        return self.sampler.get_triple_for_hinge_loss()
+
     def get_graph(self, id):
         return self.gs[id]
 

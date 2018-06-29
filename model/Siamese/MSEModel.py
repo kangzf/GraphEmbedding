@@ -1,13 +1,14 @@
 from config import FLAGS
-from models import GCNTN
+from models import Model
 from layers_factory import create_activation
 from similarity import create_sim_kernel
 import numpy as np
 import tensorflow as tf
 
 
-class MSEModel(GCNTN):
+class MSEModel(Model):
     def __init__(self, input_dim):
+        assert(FLAGS.loss_func == 'mse')
         self.input_dim = input_dim
         # Train and validate.
         self.laplacians_1 = \

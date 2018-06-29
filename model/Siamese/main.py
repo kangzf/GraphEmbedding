@@ -12,13 +12,13 @@ import tensorflow as tf
 
 
 def main():
-    check_flags(FLAGS)
+    check_flags()
     data = SiameseModelData()
     dist_calculator = DistCalculator(
         FLAGS.dataset, FLAGS.dist_metric, FLAGS.dist_algo)
     model = create_model(FLAGS.model, data.input_dim())
     sess = tf.Session()
-    saver = Saver(FLAGS, sess)
+    saver = Saver(sess)
     sess.run(tf.global_variables_initializer())
     train_costs, train_times, val_costs, val_times = \
         train_val(data, dist_calculator, model, saver, sess)

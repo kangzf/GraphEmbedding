@@ -25,6 +25,13 @@ class Model(object):
         self.optimizer = None
         self.opt_op = None
 
+        self.batch_size = FLAGS.batch_size
+        self.loss_func = FLAGS.loss_func
+        self.weight_decay = FLAGS.weight_decay
+        self.optimizer = tf.train.AdamOptimizer(
+            learning_rate=FLAGS.learning_rate)
+        self.build()
+
     def build(self):
         self._build()
         print('Model built')
@@ -33,38 +40,6 @@ class Model(object):
         print('Loss built')
         self.opt_op = self.optimizer.minimize(self.loss)
         print('Optimizer built')
-
-    def _build(self):
-        raise NotImplementedError()
-
-    def _loss(self):
-        raise NotImplementedError()
-
-    def save(self, sess=None):
-        if not sess:
-            raise AttributeError("TensorFlow session not provided.")
-        saver = tf.train.Saver(self.vars)
-        save_path = saver.save(sess, "tmp/%s.ckpt" % self.name)
-        print("Model saved in file: %s" % save_path)
-
-    def load(self, sess=None):
-        if not sess:
-            raise AttributeError("TensorFlow session not provided.")
-        saver = tf.train.Saver(self.vars)
-        save_path = "tmp/%s.ckpt" % self.name
-        saver.restore(sess, save_path)
-        print("Model restored from file: %s" % save_path)
-
-
-class GCNTN(Model):
-    def __init__(self):
-        super(GCNTN, self).__init__()
-        self.batch_size = FLAGS.batch_size
-        self.loss_func = FLAGS.loss_func
-        self.weight_decay = FLAGS.weight_decay
-        self.optimizer = tf.train.AdamOptimizer(
-            learning_rate=FLAGS.learning_rate)
-        self.build()
 
     def _build(self):
         with tf.variable_scope(self.name):
@@ -107,22 +82,14 @@ class GCNTN(Model):
             l2_loss = self._mse_loss()
             self.loss += l2_loss
             tf.summary.scalar('l2_loss', l2_loss)
+        elif self.loss_func == 'hinge':
+            hinge_loss = self._hinge_loss()
+            self.loss += hinge_loss
+            tf.summary.scalar('hinge_loss', hinge_loss)
         else:
             raise RuntimeError('Unknown loss function {}'.format(self.loss_func))
 
         tf.summary.scalar('total_loss', self.loss)
-
-    # def _rank_loss(self, gamma):
-    #     y_pred = self.pred_sim()
-    #     pos_interact_score = y_pred[
-    #                          :FLAGS.batch_size_p]  # need set new flag for positive sample number & assume pred is a vector
-    #     neg_interact_score = y_pred[FLAGS.batch_size_p:]
-    #     diff_mat = tf.reshape(tf.tile(pos_interact_score, [FLAGS.num_negatives]),
-    #                           # need set new flag for negative sampling
-    #                           (-1,
-    #                            1)) - neg_interact_score  # assume negative sampling is conducted in this way: p+n1+n2+..+nk
-    #     rank_loss = tf.reduce_mean(-tf.log(tf.sigmoid(gamma * diff_mat)))
-    #     return rank_loss
 
     def pred_sim_without_act(self):
         return self.test_output
@@ -145,6 +112,24 @@ class GCNTN(Model):
     def _mse_loss(self):
         raise NotImplementedError()
 
+    def _hinge_loss(self):
+        raise NotImplementedError()
+
     def _log_mat(self, mat, layer, label):
         if FLAGS.log:
             tf.summary.histogram(layer.name + '/' + label, mat)
+
+    def save(self, sess=None):
+        if not sess:
+            raise AttributeError("TensorFlow session not provided.")
+        saver = tf.train.Saver(self.vars)
+        save_path = saver.save(sess, "tmp/%s.ckpt" % self.name)
+        print("Model saved in file: %s" % save_path)
+
+    def load(self, sess=None):
+        if not sess:
+            raise AttributeError("TensorFlow session not provided.")
+        saver = tf.train.Saver(self.vars)
+        save_path = "tmp/%s.ckpt" % self.name
+        saver.restore(sess, save_path)
+        print("Model restored from file: %s" % save_path)

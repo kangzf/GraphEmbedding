@@ -2,16 +2,17 @@
 # Hyperparameters   | Range        | Note
 # ------------------------------------------------------------------------------
 # dist_norm          T/F            2 norm/no norm
-# yeta               0.2/0.01       5 diff yetas
-# activation func    5              5 diff  activation layers
+# yeta               0.2/0.01       4/6 diff yetas
+# activation func    5              5 diff activation layers
 # learning_rate      0.06-0.001     6 diff lr
 # iteration          500-2000       4 diff iter
-# validation ratio   0.2-0.4        2 diff ratio   
+# validation ratio   0.2-0.4        2 diff ratio
+# dropout            0.0-1.0        2 diff values
 # ------------------------------------------------------------------------------
-from utils_siamese import get_siamese_dir
+from utils_siamese import get_siamese_dir, get_model_info_as_str
 from utils import get_ts
 from main import main
-from config import FLAGS, placeholders
+from config import FLAGS
 import numpy as np
 import tensorflow as tf
 import csv
@@ -35,15 +36,16 @@ header = ['dist_norm', 'yeta', 'final_act', 'learning_rate', 'iter',
           'mrr_nonorm', 'mse_norm', 'mse_nonorm']
 
 dist_norm_range = [True, False]
-yeta_range_norm = [0.1, 0.2, 0.3, 0.5, 0.8]
-yeta_range_nonorm = [0.1, 0.05, 0.01, 0.005, 0.001]
+yeta_range_norm = [0.1, 0.2, 0.3, 0.4, 0.6, 0.8]
+yeta_range_nonorm = [0.01, 0.005, 0.001, 0.0005]
 final_act_range = ['identity', 'relu', 'sigmoid', 'tanh', 'sim_kernel']
 lr_range = [0.06, 0.03, 0.01, 0.006, 0.003, 0.001]
 iter_range = list(range(500, 2001, 500))
 val_ratio_range = [0.25, 0.4]
+dropout_range = [0.1, 0.5]
 
 
-def tune(FLAGS, placeholders):
+def tune(FLAGS):
     print('Remember to clean up "../../save/SiameseModelData*" '
           'if something does not work!')
     f = setup_file()
@@ -53,15 +55,17 @@ def tune(FLAGS, placeholders):
     i = 1
     for dist_norm in dist_norm_range:
         yeta_range = yeta_range_norm if dist_norm == True else yeta_range_nonorm
-        for yeta, final_act, lr, iteration, val_ratio in itertools.product(
-                yeta_range, final_act_range, lr_range, iter_range,
-                val_ratio_range):
+        for yeta, final_act, lr, iteration, val_ratio, dropout in \
+                itertools.product(
+                    yeta_range, final_act_range, lr_range, iter_range,
+                    val_ratio_range, dropout_range):
             print('Number of tuning iteration: {}'.format(i),
                   'dist_norm: {}'.format(dist_norm), 'yeta: {}'.format(yeta),
                   'final_act: {}'.format(final_act),
                   'learning_rate: {}'.format(lr),
                   'iteration: {}'.format(iteration),
-                  'validation_ratio: {}'.format(val_ratio))
+                  'validation_ratio: {}'.format(val_ratio),
+                  'dropout: {}'.format(dropout))
             i += 1
             flags = tf.app.flags
             reset_flag(FLAGS, flags.DEFINE_string, 'dataset', dataset)
@@ -93,11 +97,12 @@ def tune(FLAGS, placeholders):
             reset_flag(FLAGS, flags.DEFINE_string, 'final_act', final_act)
             reset_flag(FLAGS, flags.DEFINE_float, 'learning_rate', lr)
             reset_flag(FLAGS, flags.DEFINE_integer, 'iters', iteration)
+            reset_flag(FLAGS, flags.DEFINE_float, 'dropout', dropout)
             reset_flag(FLAGS, flags.DEFINE_bool, 'log', False)
             reset_flag(FLAGS, flags.DEFINE_bool, 'plot_results', False)
             FLAGS = tf.app.flags.FLAGS
             train_costs, train_times, val_costs, val_times, results \
-                = main(FLAGS, placeholders)
+                = main()
             best_train_loss = np.min(train_costs)
             best_train_iter = np.argmin(train_costs)
             best_val_loss = np.min(val_costs)
@@ -108,11 +113,11 @@ def tune(FLAGS, placeholders):
                   'best_val_iter: {}'.format(best_val_iter))
 
             model_results = parse_results(results)
-            csv_record([[str(x) for x in
-                         [dist_norm, yeta, final_act, lr, iteration,
-                          val_ratio,
-                          best_train_loss, best_train_iter, best_val_loss,
-                          best_val_iter] + model_results]], f)
+            csv_record([str(x) for x in
+                        [dist_norm, yeta, final_act, lr, iteration,
+                         val_ratio,
+                         best_train_loss, best_train_iter, best_val_loss,
+                         best_val_iter] + model_results], f)
 
             if best_train_loss < best_results_train_loss:
                 best_results_train_loss = best_train_loss
@@ -130,40 +135,41 @@ def tune(FLAGS, placeholders):
     print(results_train)
     print(results_val)
 
-    csv_record([['Final resultss:']], f)
-    csv_record([['dist_norm', 'yeta', 'final_act', 'learning_rate', 'iter',
-                 'validation_ratio',
-                 'best_train_loss', 'best_train_loss_iter',
-                 'prec@1_norm', 'prec@2_norm', 'prec@3_norm', 'prec@4_norm',
-                 'prec@5_norm', 'prec@6_norm', 'prec@7_norm',
-                 'prec@8_norm', 'prec@9_norm',
-                 'prec@10_norm', 'prec@1_nonorm', 'prec@2_nonorm',
-                 'prec@3_nonorm',
-                 'prec@4_nonorm', 'prec@5_nonorm',
-                 'prec@6_nonorm', 'prec@7_nonorm',
-                 'prec@8_nonorm', 'prec@9_nonorm', 'prec@10_nonorm', 'mrr_norm',
-                 'mrr_nonorm', 'mse_norm', 'mse_nonorm']], f)
-    csv_record([[str(x) for x in results_train]], f)
+    csv_record(['Final results:'], f)
+    csv_record(['dist_norm', 'yeta', 'final_act', 'learning_rate', 'iter',
+                'validation_ratio',
+                'best_train_loss', 'best_train_loss_iter',
+                'prec@1_norm', 'prec@2_norm', 'prec@3_norm', 'prec@4_norm',
+                'prec@5_norm', 'prec@6_norm', 'prec@7_norm',
+                'prec@8_norm', 'prec@9_norm',
+                'prec@10_norm', 'prec@1_nonorm', 'prec@2_nonorm',
+                'prec@3_nonorm',
+                'prec@4_nonorm', 'prec@5_nonorm',
+                'prec@6_nonorm', 'prec@7_nonorm',
+                'prec@8_nonorm', 'prec@9_nonorm', 'prec@10_nonorm', 'mrr_norm',
+                'mrr_nonorm', 'mse_norm', 'mse_nonorm'], f)
+    csv_record([str(x) for x in results_train], f)
 
-    csv_record([['dist_norm', 'yeta', 'final_act', 'learning_rate', 'iter',
-                 'validation_ratio',
-                 'best_val_loss', 'best_val_loss_iter',
-                 'prec@1_norm', 'prec@2_norm', 'prec@3_norm', 'prec@4_norm',
-                 'prec@5_norm', 'prec@6_norm', 'prec@7_norm',
-                 'prec@8_norm', 'prec@9_norm',
-                 'prec@10_norm', 'prec@1_nonorm', 'prec@2_nonorm',
-                 'prec@3_nonorm',
-                 'prec@4_nonorm', 'prec@5_nonorm',
-                 'prec@6_nonorm', 'prec@7_nonorm',
-                 'prec@8_nonorm', 'prec@9_nonorm', 'prec@10_nonorm', 'mrr_norm',
-                 'mrr_nonorm', 'mse_norm', 'mse_nonorm']], f)
-    csv_record([[str(x) for x in results_val]], f)
+    csv_record(['dist_norm', 'yeta', 'final_act', 'learning_rate', 'iter',
+                'validation_ratio',
+                'best_val_loss', 'best_val_loss_iter',
+                'prec@1_norm', 'prec@2_norm', 'prec@3_norm', 'prec@4_norm',
+                'prec@5_norm', 'prec@6_norm', 'prec@7_norm',
+                'prec@8_norm', 'prec@9_norm',
+                'prec@10_norm', 'prec@1_nonorm', 'prec@2_nonorm',
+                'prec@3_nonorm',
+                'prec@4_nonorm', 'prec@5_nonorm',
+                'prec@6_nonorm', 'prec@7_nonorm',
+                'prec@8_nonorm', 'prec@9_nonorm', 'prec@10_nonorm', 'mrr_norm',
+                'mrr_nonorm', 'mse_norm', 'mse_nonorm'], f)
+    csv_record([str(x) for x in results_val], f)
 
 
 def setup_file():
     f = open(file_name, 'w')
-    writer = csv.writer(f)
-    writer.writerows([header])
+    f.write(get_model_info_as_str())
+    f.write(','.join(map(str, header)) + '\n')
+    f.flush()
     return f
 
 
@@ -180,8 +186,8 @@ def parse_results(results):
 
 
 def csv_record(mesg, f):
-    writer = csv.writer(f)
-    writer.writerows(mesg)
+    f.write(','.join(map(str, mesg)) + '\n')
+    f.flush()
 
 
 def reset_flag(FLAGS, func, str, v):
@@ -201,4 +207,4 @@ def del_all_flags(FLAGS):
         FLAGS.__delattr__(keys)
 
 
-tune(FLAGS, placeholders)
+tune(FLAGS)

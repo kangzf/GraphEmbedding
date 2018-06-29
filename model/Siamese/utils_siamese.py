@@ -1,3 +1,4 @@
+from config import FLAGS
 import sys
 from os.path import dirname, abspath
 
@@ -9,7 +10,7 @@ def solve_parent_dir():
     pass
 
 
-def check_flags(FLAGS):
+def check_flags():
     assert (0 < FLAGS.valid_percentage < 1)
     assert (FLAGS.sample_num >= -1)
     assert (FLAGS.yeta >= 0)
@@ -24,3 +25,13 @@ def print_msec(sec):
 
 def get_siamese_dir():
     return cur_folder
+
+
+def get_model_info_as_str(model_info_table=None):
+    rtn = ''
+    for k, v in sorted(FLAGS.flag_values_dict().items(), key=lambda x: x[0]):
+        s = '{0:26} : {1}\n'.format(k, v)
+        rtn += s
+        if model_info_table:
+            model_info_table.append([k, '**{}**'.format(v)])
+    return rtn

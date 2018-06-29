@@ -34,8 +34,8 @@ flags.DEFINE_boolean('sampler_duplicate_removal', False,
                      'Whether to remove duplicate for sampler or not.')
 
 # For model.
-""" model: siamese_gcntn, siamese_tranductive_ntn. """
-flags.DEFINE_string('model', 'siamese_gcntn', 'Model string.')
+""" model: siamese_gcntn_mse, siamese_gcntn_hinge, siamese_tranductive_ntn. """
+flags.DEFINE_string('model', 'siamese_gcntn_mse', 'Model string.')
 # flags.DEFINE_integer('num_layers', 1, 'Number of layers.')
 # flags.DEFINE_string(
 #     'layer_0',
@@ -60,7 +60,7 @@ flags.DEFINE_string(
 # flags.DEFINE_string(
 #     'layer_3',
 #     'Dot', '')
-flags.DEFINE_integer('batch_size', 2, 'Number of graph pairs in a batch.')  # TODO: implement
+flags.DEFINE_integer('batch_size', 5, 'Number of graph pairs in a batch.')  # TODO: implement
 """ dist_norm: True, False. """
 flags.DEFINE_boolean('dist_norm', True,
                      'Whether to normalize the distance or not '
@@ -75,8 +75,24 @@ flags.DEFINE_float('yeta', 0.6, 'yeta for the gaussian kernel function.')
 """ final_act: identity, relu, sigmoid, tanh, sim_kernel (same as sim_kernel). """
 flags.DEFINE_string('final_act', 'sim_kernel',
                     'The final activation function applied to the NTN output.')
-""" loss_func: mse. """  # TODO: sigmoid pairwise, etc.
+
+""" loss_func: mse, hinge. """  # TODO: hinge, sigmoid pairwise, etc.
 flags.DEFINE_string('loss_func', 'mse', 'Loss function(s) to use.')
+
+# Start of hinge loss.
+""" delta and gamma: depend on whether dist_norm is True of False. """
+flags.DEFINE_float('delta', 0.1,
+                   'Margin between positive pairs ground truth scores'
+                   'and negative pairs scores  ground truth scores')
+flags.DEFINE_float('gamma', 0.1,
+                   'Margin between positive pairs prediction scores'
+                   'and negative pairs prediction scores')
+flags.DEFINE_integer('num_neg', 5, 'Number of negative samples.')
+# End of hinge loss.
+
+""" graph_loss: 1st, None. """ # TODO: 1st.
+flags.DEFINE_string('graph_loss', None, 'Loss function(s) to use.')
+
 """ sim_kernel: gaussian. """  # TODO: linear
 flags.DEFINE_float('dropout', 0.1, 'Dropout rate (1 - keep probability).')
 flags.DEFINE_float('weight_decay', 5e-4,

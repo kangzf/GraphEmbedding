@@ -51,6 +51,10 @@ class SiameseModelData(Data):
         graph_collection = self._get_graph_collection(train_val_test)
         return graph_collection.get_graph_pair()
 
+    def get_graph_triple_for_hinge_loss(self, train_val_test):
+        graph_collection = self._get_graph_collection(train_val_test)
+        return graph_collection.get_triple_for_hinge_loss()
+
     def get_orig_train_graph(self, orig_train_id):
         trainlen = self.train_data.num_graphs()
         vallen = self.valid_data.num_graphs()
