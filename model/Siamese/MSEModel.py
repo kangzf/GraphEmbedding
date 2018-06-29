@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 
 
-class MSEModel(Model):
+class SiameseGCNTNMSE(Model):
     def __init__(self, input_dim):
         assert(FLAGS.loss_func == 'mse')
         self.input_dim = input_dim
@@ -44,7 +44,7 @@ class MSEModel(Model):
         self.final_act_np = create_activation(
             FLAGS.final_act, self.sim_kernel, use_tf=False)
         # Build the model.
-        super(MSEModel, self).__init__()
+        super(SiameseGCNTNMSE, self).__init__()
 
     def apply_final_act_np(self, score):
         return self.final_act_np(score)

@@ -2,13 +2,13 @@ from config import FLAGS
 from models import Model
 
 
-class HingeModel(Model):
+class SiameseGCNTNHinge(Model):
     def __init__(self, input_dim):
         assert (FLAGS.loss_func == 'hinge')
         self.input_dim = input_dim
         # TODO
         # Build the model.
-        super(HingeModel, self).__init__()
+        super(SiameseGCNTNHinge, self).__init__()
 
     def apply_final_act_np(self, score):
         # TODO
