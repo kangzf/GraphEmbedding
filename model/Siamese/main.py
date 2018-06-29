@@ -21,7 +21,7 @@ def main(FLAGS, placeholders):
     else:
         raise ValueError('Invalid argument for model: ' + str(FLAGS.model))
     model = model_func(
-        FLAGS, placeholders, input_dim=data.input_dim(), logging=FLAGS.log)
+        FLAGS, placeholders, input_dim=data.input_dim(), log=FLAGS.log)
     sess = tf.Session()
     saver = Saver(FLAGS, sess)
     sess.run(tf.global_variables_initializer())

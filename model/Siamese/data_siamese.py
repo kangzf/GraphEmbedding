@@ -23,8 +23,8 @@ class SiameseModelData(Data):
         self.sampler_duplicate_removal = FLAGS.sampler_duplicate_removal
         super().__init__(self._get_name())
         print('{} train graphs; {} validation graphs; {} test graphs'.format( \
-            self.train_data.num_graphs(), \
-            self.valid_data.num_graphs(), \
+            self.train_data.num_graphs(),
+            self.valid_data.num_graphs(),
             self.test_data.num_graphs()))
 
     def init(self):

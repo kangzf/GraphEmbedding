@@ -7,7 +7,7 @@ class Eval(object):
                  sim_kernel_name, yeta, plot_results):
         self.dataset = dataset
         if plot_results:
-            self.models = BASELINE_MODELS
+            self.models = BASELINE_MODELS + [true_model]
         else:
             self.models = [true_model]
         self.rs = load_results_as_dict(dataset, self.models)

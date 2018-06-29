@@ -34,21 +34,8 @@ class Layer(object):
     def get_name(self):
         return self.name
 
-    def __call__(self, inputs, force_no_logging=False):
-        self.called_times += 1
-        with tf.name_scope(self.name + '_call_' + str(self.called_times)):
-            if self.logging and not self.sparse_inputs \
-                    and not force_no_logging:
-                if type(inputs) is list:
-                    # Assume only the first item is the actual input tensor.
-                    inputs_to_log = inputs[0]
-                else:
-                    inputs_to_log = inputs
-                tf.summary.histogram(self.name + '/inputs', inputs_to_log)
-            outputs = self._call(inputs)
-            if self.logging and not force_no_logging:
-                tf.summary.histogram(self.name + '/outputs', outputs)
-            return outputs
+    def __call__(self, inputs):
+        return self._call(inputs)
 
     def _call(self, inputs):
         return inputs
