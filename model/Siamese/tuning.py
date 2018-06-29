@@ -17,7 +17,7 @@ import tensorflow as tf
 import csv
 import itertools
 
-dataset = 'aids50nef'
+dataset = 'aids80nef'
 file_name = '{}/logs/parameter_tuning_{}_{}.csv'.format(
     get_siamese_dir(), dataset, get_ts())
 
@@ -40,7 +40,7 @@ yeta_range_nonorm = [0.1, 0.05, 0.01, 0.005, 0.001]
 final_act_range = ['identity', 'relu', 'sigmoid', 'tanh', 'sim_kernel']
 lr_range = [0.06, 0.03, 0.01, 0.006, 0.003, 0.001]
 iter_range = list(range(500, 2001, 500))
-val_ratio_range = [0.2, 0.4]
+val_ratio_range = [0.25, 0.4]
 
 
 def tune(FLAGS, placeholders):

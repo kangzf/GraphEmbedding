@@ -5,27 +5,30 @@ from eval import Eval
 import numpy as np
 import scipy.sparse as sp
 
-MODEL = 'transductive'
-DATASET = 'aids50nef'
+MODEL = 'transductive_SVD'
+DATASET = 'aids80nef'
 DIST_METRIC = 'ged'
-DIST_ALGO = 'beam80'
+DIST_ALGO = 'astar'
 SIM_KERNEL = 'gaussian'
-NONORM_YETA = 0.001
-NORM_YETA = 0.2
-DIMS = [10, 20, 30, 40, 50, 59]
+NONORM_YETA = 0.01
+NORM_YETA = 0.6
+DIMS = [10, 40, 70]
+
 
 
 def main():
     exec_turnoff_print()
     sim_mat_dict, ttsp = load_train_test_joint_sim_mat()
-    eval_dict = {'nonorm': Eval(DATASET, SIM_KERNEL, NONORM_YETA, plot_results=True),
-                 'norm': Eval(DATASET, SIM_KERNEL, NORM_YETA, plot_results=True)}
+    eval_dict = {'nonorm': Eval(
+        DATASET, DIST_ALGO, SIM_KERNEL, NONORM_YETA, plot_results=True),
+                 'norm': Eval(
+                     DATASET, DIST_ALGO, SIM_KERNEL, NORM_YETA, plot_results=True)}
     for norm_str, sim_mat in sim_mat_dict.items():
         for dim in DIMS:
             emb = perform_svd(sim_mat, dim)
             evaluate_emb(
                 emb, ttsp, eval_dict[norm_str],
-                '{}_{}_{}'.format(MODEL, norm_str, dim))
+                '{}_dist={}_dim={}'.format(MODEL, norm_str, dim))
 
 
 def load_train_test_joint_sim_mat():

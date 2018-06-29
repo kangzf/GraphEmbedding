@@ -7,7 +7,7 @@ flags = tf.app.flags
 """ dataset: aids80nef, aids700nef, aids10knef. """
 flags.DEFINE_string('dataset', 'aids80nef', 'Dataset string.')
 """ valid_percentage: (0, 1). """
-flags.DEFINE_float('valid_percentage', 0.4,
+flags.DEFINE_float('valid_percentage', 0.25,
                    '(# validation graphs) / (# validation + # training graphs.')
 """ node_feat_name: 'type' for aids. """
 flags.DEFINE_string('node_feat_name', 'type', 'Name of the node feature.')
@@ -68,9 +68,10 @@ flags.DEFINE_boolean('dist_norm', True,
 """ sim_kernel: gaussian, identity. """  # TODO: linear
 flags.DEFINE_string('sim_kernel', 'gaussian',
                     'Name of the similarity kernel.')
-""" yeta: if norm_dist, recommend 0.3 for nef, 0.2 regular;
- else 0.4; else, try 0.001. """
-flags.DEFINE_float('yeta', 0.3, 'yeta for the gaussian kernel function.')
+""" yeta: 
+ if norm_dist, try 0.6 for nef small, 0.3 for nef, 0.2 for regular;
+ else, try 0.01 for nef, 0.001 for regular. """
+flags.DEFINE_float('yeta', 0.6, 'yeta for the gaussian kernel function.')
 """ final_act: identity, relu, sigmoid, tanh, sim_kernel (same as sim_kernel). """
 flags.DEFINE_string('final_act', 'sim_kernel',
                     'The final activation function applied to the NTN output.')

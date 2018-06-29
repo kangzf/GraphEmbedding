@@ -24,6 +24,7 @@ import matplotlib
 
 matplotlib.rc('font', **{'family': 'serif', 'size': 22})
 from vis import vis
+
 # End of commenting out for qilin.
 
 BASELINE_MODELS = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
@@ -339,15 +340,15 @@ def plot_apk(dataset, models, rs, true_result, metric, norms, plot_results=True)
         get_result_path(), dataset, metric))
     rtn = {}
     for norm in norms:
-        ks = []
-        k = 1
         _, n = true_result.m_n()
-        while k < n:
-            ks.append(k)
-            k *= 2
-        plot_apk_helper(
-            dataset, models, rs, true_result, metric, norm, ks,
-            True, plot_results)
+        # ks = []
+        # k = 1
+        # while k < n:
+        #     ks.append(k)
+        #     k *= 2
+        # plot_apk_helper(
+        #     dataset, models, rs, true_result, metric, norm, ks,
+        #     True, plot_results)
         ks = range(1, n)
         d = plot_apk_helper(
             dataset, models, rs, true_result, metric, norm, ks,
@@ -376,7 +377,8 @@ def plot_apk_helper(dataset, models, rs, true_result, metric, norm, ks,
         else:
             pltfunc = plt.plot
         pltfunc(ks, aps, **get_plotting_arg(args1, model))
-        plt.scatter(ks, aps, s=200, label=model, **get_plotting_arg(args2, model))
+        plt.scatter(ks, aps, s=200, label=shorten_name(model),
+                    **get_plotting_arg(args2, model))
     plt.xlabel('k')
     # ax = plt.gca()
     # ax.set_xticks(ks)
@@ -461,7 +463,7 @@ def plot_mrr_mse_time_helper(dataset, models, rs, true_result, metric, norm,
         bar.set_color(get_plotting_arg(args1, models[i])['color'])
     autolabel(bars)
     plt.xlabel('model')
-    plt.xticks(ind, models)
+    plt.xticks(ind, shorten_names(models))
     if metric == 'time':
         ylabel = 'time (msec)'
         norm = None
@@ -471,7 +473,7 @@ def plot_mrr_mse_time_helper(dataset, models, rs, true_result, metric, norm,
     plt.grid(linestyle='dashed')
     plt.tight_layout()
     # plt.show()
-    sp = get_result_path() + '/{}/{}/ged_{}_{}_{}{}.png'.format( \
+    sp = get_result_path() + '/{}/{}/ged_{}_{}_{}{}.png'.format(
         dataset, metric, metric, dataset, '_'.join(models),
         get_norm_str(norm))
     plt.savefig(sp)
@@ -482,9 +484,17 @@ def plot_mrr_mse_time_helper(dataset, models, rs, true_result, metric, norm,
 def autolabel(rects):
     for rect in rects:
         height = rect.get_height()
-        plt.text( \
-            rect.get_x() + rect.get_width() / 2., 1.005 * height, \
+        plt.text(
+            rect.get_x() + rect.get_width() / 2., 1.005 * height,
             format_float(height), ha='center', va='bottom')
+
+
+def shorten_names(models):
+    return [shorten_name(model) for model in models]
+
+
+def shorten_name(model):
+    return '\n'.join(model.split('_'))
 
 
 def exp8():
@@ -584,8 +594,8 @@ def get_graph_stats_text(g):
 
 def exp9():
     """ Check similarity kernel. """
-    dataset = 'aids50nef'
-    model = 'beam80'
+    dataset = 'aids80nef'
+    model = 'astar'
     sim_kernel_name = 'gaussian'
     norms = [True, False]
     yetas1 = [1, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001]
@@ -659,7 +669,7 @@ def exp10():
             algo = 'astar'
             print(algo)
             d = ged(g1, g2, algo)
-            print( g1.graph['gid'], g2.graph['gid'], d)
+            print(g1.graph['gid'], g2.graph['gid'], d)
             d = ged(g2, g1, algo)
             print(g2.graph['gid'], g1.graph['gid'], d)
             algo = 'beam80'
@@ -672,4 +682,4 @@ def exp10():
 
 
 if __name__ == '__main__':
-    exp4()
+    exp9()

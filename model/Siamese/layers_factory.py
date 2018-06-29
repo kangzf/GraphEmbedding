@@ -50,13 +50,13 @@ def create_GraphConvolution_layer(layer_info, model, layer_id):
         bias=parse_as_bool(layer_info['bias']),
         featureless=False,
         num_supports=1,
-        logging=model.logging)
+        logging=model.log)
 
 
 def create_Average_layer(layer_info, model):
     if not len(layer_info) == 0:
         raise RuntimeError('Average layer must have 0 specs')
-    return Average(logging=model.logging)
+    return Average(logging=model.log)
 
 
 def create_NTN_layer(layer_info, model):
@@ -69,12 +69,12 @@ def create_NTN_layer(layer_info, model):
         dropout=parse_as_bool(layer_info['dropout']),
         inneract=create_activation(layer_info['inneract']),
         bias=parse_as_bool(layer_info['bias']),
-        logging=model.logging)
+        logging=model.log)
 
 def create_Dot_layer(layer_info, model):
     if not len(layer_info) == 0:
         raise RuntimeError('Dot layer must have 0 specs')
-    return Dot(logging=model.logging)
+    return Dot(logging=model.log)
 
 def create_activation(act, sim_kernel=None, use_tf=True):
     if act == 'relu':

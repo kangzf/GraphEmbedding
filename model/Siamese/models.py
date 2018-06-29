@@ -6,7 +6,7 @@ import tensorflow as tf
 
 class Model(object):
     def __init__(self, **kwargs):
-        allowed_kwargs = {'name', 'logging'}
+        allowed_kwargs = {'name', 'log'}
         for kwarg in kwargs.keys():
             assert kwarg in allowed_kwargs, 'Invalid keyword argument: ' + kwarg
         name = kwargs.get('name')
@@ -14,8 +14,8 @@ class Model(object):
             name = self.__class__.__name__.lower()
         self.name = name
 
-        logging = kwargs.get('logging', False)
-        self.logging = logging
+        log = kwargs.get('log', False)
+        self.log = log
 
         self.vars = {}
         self.placeholders = {}
@@ -34,9 +34,12 @@ class Model(object):
 
     def build(self):
         self._build()
+        print('Model built')
         # Build metrics
         self._loss()
+        print('Loss built')
         self.opt_op = self.optimizer.minimize(self.loss)
+        print('Optimizer built')
 
     def _loss(self):
         raise NotImplementedError
@@ -75,58 +78,37 @@ class GCNTN(Model):
         self.optimizer = tf.train.AdamOptimizer(
             learning_rate=FLAGS.learning_rate)
         print('input_dim', input_dim)
-        self.log = FLAGS.log
         self.build()
 
     def _build(self):
         with tf.variable_scope(self.name):
             self.layers = create_layers(self, self.FLAGS)
         print('Created {} layers: {}'.format(
-            len(self.layers), ','.join(l.get_name() for l in self.layers)))
+            len(self.layers), ', '.join(l.get_name() for l in self.layers)))
 
         # Build the siamese model for train_val and test, respectively,
         # because train_val involve batch_size, but test does not (only 1 pair).
         for tvt in ['train_val', 'test']:
             num_pairs = self.batch_size if tvt == 'train_val' else 1
-            force_no_logging = True if tvt == 'test' else False
-            preds = []
-            # Go through each graph pair.
-            for i in range(num_pairs):
-                actvs_two = [[], []]
-                # Go through each graph.
-                for j, inputs in enumerate(
-                        [get_phldr(self.phldr, 'inputs_1', tvt)[i],
-                         get_phldr(self.phldr, 'inputs_2', tvt)[i]]):
-                    actvs = actvs_two[j]
-                    actvs.append(inputs)
-                    assert (len(self.layers) >= 2)
-                    # Go through each layer except the last one.
-                    for k in range(0, len(self.layers) - 1):
-                        layer = self.layers[k]
-                        inputs_to_layer = actvs[-1]
-                        if layer.__class__.__name__ == 'GraphConvolution':
-                            inputs_to_layer = \
-                                [inputs_to_layer,
-                                 self._get_laplacians(i, j, tvt),
-                                 self._get_num_inputs_nonzero(i, j, tvt)]
-                        self._print_build_model(tvt, i, j, k, layer)
-                        hidden = layer(inputs_to_layer, force_no_logging)
-                        actvs.append(hidden)
-                # Assume the last layer is (and only the last layer is)
-                # the merging layer, e.g. NTN, dot.
-                merging_layer = self.layers[-1]
-                if self.log:
-                    print('Merging graph 1 and 2 through {}'.format(
-                        merging_layer.get_name()))
-                pred = merging_layer(
-                    [actvs_two[0][-1], actvs_two[1][-1]], force_no_logging)
-                preds.append(pred)
-            outputs = tf.stack(preds)
+            log = (tvt == 'train_val')
+            # Go through each layer except the last one.
+            acts = [[], []]
+            for k in range(0, len(self.layers) - 1):
+                layer = self.layers[k]
+                for j in range(2):
+                    ins = self._get_ins(k, layer, num_pairs, j, acts[j], tvt, log)
+                    outs = self._get_outs(ins, layer, j, log)
+                    assert (type(outs) is list)
+                    assert (len(outs) == num_pairs)
+                    acts[j].append(outs)
+            # Assume the last layer is (and only the last layer is)
+            # the merging layer, e.g. NTN, dot.
+            merging_layer = self.layers[-1]
+            outs = self._call_mergeing_layer(merging_layer, num_pairs, acts, log)
             if tvt == 'train_val':
-                self.outputs = outputs
+                self.outputs = outs
             else:
-                self.test_output = outputs
-            assert (self.outputs.get_shape()[0] == self.batch_size)
+                self.test_output = outs
 
         # Store model variables for easy access.
         variables = tf.get_collection(
@@ -143,7 +125,6 @@ class GCNTN(Model):
 
         if self.loss_func == 'mse':
             # L2 loss.
-            self.temp = self.pred_sim  # TODO: investigate
             l2_loss = tf.nn.l2_loss(
                 self.sim_kernel.dist_to_sim_tf(self._get_dist()) -
                 self.pred_sim()) / self.batch_size
@@ -151,6 +132,7 @@ class GCNTN(Model):
             tf.summary.scalar('l2_loss', l2_loss)
         else:
             raise RuntimeError('Unknown loss function {}'.format(self.loss_func))
+
         tf.summary.scalar('total_loss', self.loss)
 
     # def _rank_loss(self, gamma):
@@ -174,6 +156,54 @@ class GCNTN(Model):
     def apply_final_act_np(self, score):
         return self.final_act_np(score)
 
+    def _get_ins(self, layer_idx, layer, num_pairs, j, prev_outs, tvt, log):
+        if layer_idx == 0:
+            ins = []
+            for i in range(num_pairs):
+                ins.append(get_phldr(
+                    self.phldr, 'inputs_{}'.format(j + 1), tvt)[i])
+        else:
+            ins = prev_outs[-1]
+            ins_mat = tf.concat(ins, 0)
+            self._log_mat(ins_mat, layer, 'ins_{}'.format(j + 1), log)
+        if layer.__class__.__name__ == 'GraphConvolution':
+            for i in range(len(ins)):
+                ins[i] = \
+                    [ins[i],
+                     self._get_laplacians(i, j, tvt),
+                     self._get_num_inputs_nonzero(i, j, tvt)]
+        return ins
+
+    def _get_outs(self, ins, layer, j, log):
+        outs = []
+        for input in ins:
+            output = layer(input)
+            outs.append(output)
+        outs_mat = tf.concat(outs, 0)
+        self._log_mat(outs_mat, layer, 'outs_{}'.format(j + 1), log)
+        return outs
+
+    def _call_mergeing_layer(self, merging_layer, num_pairs, acts, log):
+        ins = []
+        outs = []
+        for i in range(num_pairs):
+            input_0 = acts[0][-1][i]
+            input_1 = acts[1][-1][i]
+            ins.append(input_0)
+            ins.append(input_1)
+            output = merging_layer([input_0, input_1])
+            outs.append(output)
+        ins_mat = tf.stack(ins)
+        outs = tf.stack(outs)
+        self._log_mat(ins_mat, merging_layer, 'ins', log)
+        self._log_mat(outs, merging_layer, 'outs', log)
+        return outs
+
+    def _log_mat(self, mat, layer, label, log):
+        if log:
+            tf.summary.histogram(layer.name + '/' + label, mat)
+        pass
+
     def _get_laplacians(self, i, j, tvt):
         if j == 0:
             return get_phldr(self.phldr, 'laplacians_1', tvt)[i]
@@ -195,9 +225,3 @@ class GCNTN(Model):
             return self.phldr['norm_dists']
         else:
             return self.phldr['dists']
-
-    def _print_build_model(self, tvt, i, j, k, layer):
-        if self.log:
-            print('{} Batch index {} graph {} through layer {}:{}'.format(
-                tvt, i + 1, j + 1, k + 1, layer.get_name()))
-            self.printed_build_model = True
