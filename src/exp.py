@@ -29,7 +29,7 @@ from vis import vis
 
 BASELINE_MODELS = ['beam5', 'beam10', 'beam20', 'beam40', 'beam80', \
                    'hungarian', 'vj']
-TRUE_MODEL = 'beam80'
+TRUE_MODEL = 'astar'
 
 """ Plotting. """
 args1 = {'astar': {'color': 'grey'},
@@ -499,10 +499,12 @@ def shorten_name(model):
 
 def exp8():
     """ Query visualization. """
-    dataset = 'aids10k'
-    model = 'graph2vec'
+    dataset = 'aids80nef'
+    model = 'beam80'
     norms = [True, False]
     k = 5
+    dir = get_result_path() + '/{}/query_vis/{}'.format(dataset, model)
+    create_dir_if_not_exists(dir)
     info_dict = {
         # draw node config
         'draw_node_size': 10,
@@ -521,10 +523,10 @@ def exp8():
         'each_graph_text_font_size': 8,
         'each_graph_text_pos': [0.5, 1.05],
         # graph padding: value range: [0, 1]
-        'top_space': 0.25,  # out of whole graph
+        'top_space': 0.26,  # out of whole graph
         'bottom_space': 0,
         'hbetween_space': 1,  # out of the subgraph
-        'wbetween_space': 0.02,
+        'wbetween_space': 0.06,
         # plot config
         'plot_dpi': 200,
         'plot_save_path': ''
@@ -541,28 +543,26 @@ def exp8():
             gids = ids[i][:k]
             gs = [train_data.graphs[j] for j in gids]
             info_dict['each_graph_text_list'] = \
-                [get_text_label(r, tr, i, i, q, model, norm, True)] + \
-                [get_text_label(r, tr, i, j, \
+                [get_text_label(dataset, r, tr, i, i, q, model, norm, True)] + \
+                [get_text_label(dataset, r, tr, i, j,
                                 train_data.graphs[j], model, norm, False) \
                  for j in gids]
-            info_dict['plot_save_path'] = \
-                get_result_path() + \
-                '/{}/query_vis/{}/query_vis_{}_{}_{}{}.png'.format( \
-                    dataset, model, dataset, model, i, get_norm_str(norm))
+            info_dict['plot_save_path'] = '{}/query_vis_{}_{}_{}{}.png'.format(
+                dir, dataset, model, i, get_norm_str(norm))
             vis(q, gs, info_dict)
 
 
-def get_text_label(r, tr, qid, gid, g, model, norm, is_query):
+def get_text_label(dataset, r, tr, qid, gid, g, model, norm, is_query):
     if is_query or r.model_ == tr.model_:
         rtn = '\n\n'
     else:
         ged_str = get_ged_select_norm_str(tr, qid, gid, norm)
-        rtn = 'true ged: {}\ntrue rank: {}\n'.format( \
+        rtn = 'true ged: {}\ntrue rank: {}\n'.format(
             ged_str, tr.ranking(qid, gid, norm))
-    rtn += 'id: {}\norig id: {}{}'.format( \
+    rtn += 'id: {}\norig id: {}{}'.format(
         gid, g.graph['gid'], get_graph_stats_text(g))
     if is_query:
-        rtn += '\nquery\nmodel: {}'.format(model)
+        rtn += '\nquery {}\nmodel: {}'.format(dataset, model)
     else:
         ged_sim_str, ged_sim = r.dist_sim(qid, gid, norm)
         if ged_sim_str == 'ged':
@@ -572,7 +572,7 @@ def get_text_label(r, tr, qid, gid, g, model, norm, is_query):
             rtn += '\n {}: {:.2f}\n'.format(ged_sim_str, ged_sim)
         t = r.time(qid, gid)
         if t:
-            rtn += 'time: {:.2f} sec'.format(t)
+            rtn += 'time: {:.2f} msec'.format(t)
         else:
             rtn += 'time: -'
     return rtn
@@ -682,4 +682,4 @@ def exp10():
 
 
 if __name__ == '__main__':
-    exp9()
+    exp8()

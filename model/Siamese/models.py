@@ -1,12 +1,11 @@
-from layers_factory import create_layers, create_activation
-from similarity import create_sim_kernel
-from utils_siamese import get_phldr
+from config import FLAGS
+from layers_factory import create_layers
 import tensorflow as tf
 
 
 class Model(object):
     def __init__(self, **kwargs):
-        allowed_kwargs = {'name', 'log'}
+        allowed_kwargs = {'name'}
         for kwarg in kwargs.keys():
             assert kwarg in allowed_kwargs, 'Invalid keyword argument: ' + kwarg
         name = kwargs.get('name')
@@ -14,23 +13,17 @@ class Model(object):
             name = self.__class__.__name__.lower()
         self.name = name
 
-        log = kwargs.get('log', False)
-        self.log = log
-
         self.vars = {}
         self.placeholders = {}
 
         self.layers = []
 
-        self.outputs = None
+        self.train_val_outputs = None
+        self.test_output = None
 
         self.loss = 0
-        self.accuracy = 0
         self.optimizer = None
         self.opt_op = None
-
-    def _build(self):
-        raise NotImplementedError
 
     def build(self):
         self._build()
@@ -41,8 +34,11 @@ class Model(object):
         self.opt_op = self.optimizer.minimize(self.loss)
         print('Optimizer built')
 
+    def _build(self):
+        raise NotImplementedError()
+
     def _loss(self):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def save(self, sess=None):
         if not sess:
@@ -61,52 +57,34 @@ class Model(object):
 
 
 class GCNTN(Model):
-    def __init__(self, FLAGS, placeholders, input_dim, **kwargs):
-        super(GCNTN, self).__init__(**kwargs)
-        self.FLAGS = FLAGS
-        self.phldr = placeholders
-        self.input_dim = input_dim
+    def __init__(self):
+        super(GCNTN, self).__init__()
         self.batch_size = FLAGS.batch_size
-        self.sim_kernel = create_sim_kernel(
-            FLAGS.sim_kernel, FLAGS.yeta)
-        self.final_act = create_activation(
-            FLAGS.final_act, self.sim_kernel, use_tf=True)
-        self.final_act_np = create_activation(
-            FLAGS.final_act, self.sim_kernel, use_tf=False)
         self.loss_func = FLAGS.loss_func
         self.weight_decay = FLAGS.weight_decay
         self.optimizer = tf.train.AdamOptimizer(
             learning_rate=FLAGS.learning_rate)
-        print('input_dim', input_dim)
         self.build()
 
     def _build(self):
         with tf.variable_scope(self.name):
-            self.layers = create_layers(self, self.FLAGS)
+            self.layers = create_layers(self)
+        assert (len(self.layers) > 0)
         print('Created {} layers: {}'.format(
             len(self.layers), ', '.join(l.get_name() for l in self.layers)))
 
         # Build the siamese model for train_val and test, respectively,
-        # because train_val involve batch_size, but test does not (only 1 pair).
         for tvt in ['train_val', 'test']:
-            num_pairs = self.batch_size if tvt == 'train_val' else 1
-            log = (tvt == 'train_val')
             # Go through each layer except the last one.
-            acts = [[], []]
-            for k in range(0, len(self.layers) - 1):
-                layer = self.layers[k]
-                for j in range(2):
-                    ins = self._get_ins(k, layer, num_pairs, j, acts[j], tvt, log)
-                    outs = self._get_outs(ins, layer, j, log)
-                    assert (type(outs) is list)
-                    assert (len(outs) == num_pairs)
-                    acts[j].append(outs)
-            # Assume the last layer is (and only the last layer is)
-            # the merging layer, e.g. NTN, dot.
-            merging_layer = self.layers[-1]
-            outs = self._call_mergeing_layer(merging_layer, num_pairs, acts, log)
+            acts = [self._get_ins(self.layers[0], tvt)]
+            outs = None
+            for k, layer in enumerate(self.layers):
+                ins = self._proc_ins(acts[-1], k, layer, tvt)
+                outs = layer(ins)
+                outs = self._proc_outs(outs, k, layer, tvt)
+                acts.append(outs)
             if tvt == 'train_val':
-                self.outputs = outs
+                self.train_val_outputs = outs
             else:
                 self.test_output = outs
 
@@ -117,6 +95,7 @@ class GCNTN(Model):
 
     def _loss(self):
         # Weight decay loss.
+        wdl = 0.0
         for layer in self.layers:  # TODO: why only layers[0] in gcn?
             for var in layer.vars.values():
                 wdl = self.weight_decay * tf.nn.l2_loss(var)
@@ -125,9 +104,7 @@ class GCNTN(Model):
 
         if self.loss_func == 'mse':
             # L2 loss.
-            l2_loss = tf.nn.l2_loss(
-                self.sim_kernel.dist_to_sim_tf(self._get_dist()) -
-                self.pred_sim()) / self.batch_size
+            l2_loss = self._mse_loss()
             self.loss += l2_loss
             tf.summary.scalar('l2_loss', l2_loss)
         else:
@@ -147,81 +124,27 @@ class GCNTN(Model):
     #     rank_loss = tf.reduce_mean(-tf.log(tf.sigmoid(gamma * diff_mat)))
     #     return rank_loss
 
-    def pred_sim(self):
-        return self.final_act(self.outputs)
-
     def pred_sim_without_act(self):
         return self.test_output
 
     def apply_final_act_np(self, score):
-        return self.final_act_np(score)
+        raise NotImplementedError()
 
-    def _get_ins(self, layer_idx, layer, num_pairs, j, prev_outs, tvt, log):
-        if layer_idx == 0:
-            ins = []
-            for i in range(num_pairs):
-                ins.append(get_phldr(
-                    self.phldr, 'inputs_{}'.format(j + 1), tvt)[i])
-        else:
-            ins = prev_outs[-1]
-            ins_mat = tf.concat(ins, 0)
-            self._log_mat(ins_mat, layer, 'ins_{}'.format(j + 1), log)
-        if layer.__class__.__name__ == 'GraphConvolution':
-            for i in range(len(ins)):
-                ins[i] = \
-                    [ins[i],
-                     self._get_laplacians(i, j, tvt),
-                     self._get_num_inputs_nonzero(i, j, tvt)]
-        return ins
+    def get_feed_dict(self, data, dist_calculator, tvt, test_id, train_id):
+        raise NotImplementedError()
 
-    def _get_outs(self, ins, layer, j, log):
-        outs = []
-        for input in ins:
-            output = layer(input)
-            outs.append(output)
-        outs_mat = tf.concat(outs, 0)
-        self._log_mat(outs_mat, layer, 'outs_{}'.format(j + 1), log)
-        return outs
+    def _get_ins(self, layer, tvt):
+        raise NotImplementedError()
 
-    def _call_mergeing_layer(self, merging_layer, num_pairs, acts, log):
-        ins = []
-        outs = []
-        for i in range(num_pairs):
-            input_0 = acts[0][-1][i]
-            input_1 = acts[1][-1][i]
-            ins.append(input_0)
-            ins.append(input_1)
-            output = merging_layer([input_0, input_1])
-            outs.append(output)
-        ins_mat = tf.stack(ins)
-        outs = tf.stack(outs)
-        self._log_mat(ins_mat, merging_layer, 'ins', log)
-        self._log_mat(outs, merging_layer, 'outs', log)
-        return outs
+    def _proc_ins(self, ins, k, layer, tvt):
+        raise NotImplementedError()
 
-    def _log_mat(self, mat, layer, label, log):
-        if log:
+    def _proc_outs(self, outs, k, layer, tvt):
+        raise NotImplementedError()
+
+    def _mse_loss(self):
+        raise NotImplementedError()
+
+    def _log_mat(self, mat, layer, label):
+        if FLAGS.log:
             tf.summary.histogram(layer.name + '/' + label, mat)
-        pass
-
-    def _get_laplacians(self, i, j, tvt):
-        if j == 0:
-            return get_phldr(self.phldr, 'laplacians_1', tvt)[i]
-        elif j == 1:
-            return get_phldr(self.phldr, 'laplacians_2', tvt)[i]
-        else:
-            assert (False)
-
-    def _get_num_inputs_nonzero(self, i, j, tvt):
-        if j == 0:
-            return get_phldr(self.phldr, 'num_inputs_1_nonzero', tvt)[i]
-        elif j == 1:
-            return get_phldr(self.phldr, 'num_inputs_2_nonzero', tvt)[i]
-        else:
-            assert (False)
-
-    def _get_dist(self):
-        if self.FLAGS.dist_norm:
-            return self.phldr['norm_dists']
-        else:
-            return self.phldr['dists']

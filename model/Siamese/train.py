@@ -1,22 +1,23 @@
+from config import FLAGS
 from utils_siamese import print_msec
 from eval import Eval
 from time import time
 import numpy as np
 
 
-def train_val(FLAGS, data, placeholders, dist_calculator, model, saver, sess):
+def train_val(data, dist_calculator, model, saver, sess):
     train_costs, train_times, val_costs, val_times = [], [], [], []
     for iter in range(FLAGS.iters):
         # Train.
         train_cost, train_time = run_tf(
-            FLAGS, data, placeholders, dist_calculator, model, saver, sess,
+            data, dist_calculator, model, saver, sess,
             'train', iter=iter)
         train_costs.append(train_cost)
         train_times.append(train_time)
 
         # Validate.
         val_cost, val_time = run_tf(
-            FLAGS, data, placeholders, dist_calculator, model, saver, sess,
+            data, dist_calculator, model, saver, sess,
             'val', iter=iter)
         val_costs.append(val_cost)
         val_times.append(val_time)
@@ -43,20 +44,20 @@ def train_val(FLAGS, data, placeholders, dist_calculator, model, saver, sess):
     return train_costs, train_times, val_costs, val_times
 
 
-def test(FLAGS, data, placeholders, dist_calculator, model, saver, sess):
+def test(data, dist_calculator, model, saver, sess):
     # Test.
     eval = Eval(FLAGS.dataset, FLAGS.dist_algo,
                 FLAGS.sim_kernel, FLAGS.yeta, FLAGS.plot_results)
     m, n = data.m_n()
     test_sim_mat = np.zeros((m, n))
     test_time_mat = np.zeros((m, n))
-    run_tf(FLAGS, data, placeholders, dist_calculator, model, saver, sess,
+    run_tf(data, dist_calculator, model, saver, sess,
            'test', 0, 0)  # flush the pipeline
     print('i,j,time,sim,true_sim')
     for i in range(m):
         for j in range(n):
             sim_i_j, test_time = run_tf(
-                FLAGS, data, placeholders, dist_calculator, model, saver, sess,
+                data, dist_calculator, model, saver, sess,
                 'test', i, j)
             sim_i_j = sim_i_j[0]
             test_time *= 1000
@@ -72,10 +73,10 @@ def test(FLAGS, data, placeholders, dist_calculator, model, saver, sess):
     return results
 
 
-def run_tf(FLAGS, data, placeholders, dist_calculator, model, saver, sess, tvt,
+def run_tf(data, dist_calculator, model, saver, sess, tvt,
            test_id=None, train_id=None, iter=None):
-    feed_dict = data.get_feed_dict(
-        FLAGS, placeholders, dist_calculator, tvt, test_id, train_id)
+    feed_dict = model.get_feed_dict(
+        data, dist_calculator, tvt, test_id, train_id)
     if tvt == 'train':
         objs = [model.opt_op, model.loss]
         # objs = [model.pred_sim(), model.opt_op, model.loss] # TODO: figure out why it's slow

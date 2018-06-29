@@ -5,6 +5,10 @@ cur_folder = dirname(abspath(__file__))
 sys.path.insert(0, '{}/../../src'.format(cur_folder))
 
 
+def solve_parent_dir():
+    pass
+
+
 def check_flags(FLAGS):
     assert (0 < FLAGS.valid_percentage < 1)
     assert (FLAGS.sample_num >= -1)
@@ -20,10 +24,3 @@ def print_msec(sec):
 
 def get_siamese_dir():
     return cur_folder
-
-
-def get_phldr(phldr, key, tvt):
-    if 'train' in tvt or 'val' in tvt:
-        return phldr[key]
-    else:
-        return phldr['test_{}'.format(key.replace('inputs', 'input'))]
