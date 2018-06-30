@@ -71,7 +71,7 @@ def tune(FLAGS):
             reset_flag(FLAGS, flags.DEFINE_string, 'dataset', dataset)
             reset_flag(FLAGS, flags.DEFINE_float, 'valid_percentage',
                        val_ratio)
-            reset_flag(FLAGS, flags.DEFINE_string, 'model', 'siamese_gcntn')
+            reset_flag(FLAGS, flags.DEFINE_string, 'model', 'siamese_gcntn_mse')
             reset_flag(FLAGS, flags.DEFINE_integer, 'num_layers', 4)
             reset_flag(
                 FLAGS, flags.DEFINE_string,
