@@ -15,7 +15,6 @@ from main import main
 from config import FLAGS
 import numpy as np
 import tensorflow as tf
-import csv
 import itertools
 
 dataset = 'aids80nef'
@@ -34,7 +33,7 @@ header = ['dist_norm', 'yeta', 'final_act', 'learning_rate', 'iter',
           'prec@6_nonorm', 'prec@7_nonorm',
           'prec@8_nonorm', 'prec@9_nonorm', 'prec@10_nonorm', 'mrr_norm',
           'mrr_nonorm', 'mse_norm', 'mse_nonorm']
-
+model = 'siamese_gcntn_mse'
 dist_norm_range = [True, False]
 yeta_range_norm = [0.1, 0.2, 0.3, 0.4, 0.6, 0.8]
 yeta_range_nonorm = [0.01, 0.005, 0.001, 0.0005]
@@ -71,7 +70,7 @@ def tune(FLAGS):
             reset_flag(FLAGS, flags.DEFINE_string, 'dataset', dataset)
             reset_flag(FLAGS, flags.DEFINE_float, 'valid_percentage',
                        val_ratio)
-            reset_flag(FLAGS, flags.DEFINE_string, 'model', 'siamese_gcntn_mse')
+            reset_flag(FLAGS, flags.DEFINE_string, 'model', model)
             reset_flag(FLAGS, flags.DEFINE_integer, 'num_layers', 4)
             reset_flag(
                 FLAGS, flags.DEFINE_string,
@@ -174,12 +173,12 @@ def setup_file():
 
 
 def parse_results(results):
-    mrr_norm = results['mrr_norm']['siamese_gcntn']
-    mrr_nonorm = results['mrr_nonorm']['siamese_gcntn']
-    mse_norm = results['mse_norm']['siamese_gcntn']
-    mse_nonorm = results['mse_nonorm']['siamese_gcntn']
-    apk_norm = results['apk_norm']['siamese_gcntn']['aps'][:10]
-    apk_nonorm = results['apk_nonorm']['siamese_gcntn']['aps'][:10]
+    mrr_norm = results['mrr_norm'][model]
+    mrr_nonorm = results['mrr_nonorm'][model]
+    mse_norm = results['mse_norm'][model]
+    mse_nonorm = results['mse_nonorm'][model]
+    apk_norm = results['apk_norm'][model]['aps'][:10]
+    apk_nonorm = results['apk_nonorm'][model]['aps'][:10]
     model_results = list(apk_norm) + list(apk_nonorm) + \
                     [mrr_norm, mrr_nonorm, mse_norm, mse_nonorm]
     return model_results
