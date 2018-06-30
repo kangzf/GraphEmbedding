@@ -1,3 +1,4 @@
+from config import FLAGS
 from inits import *
 import tensorflow as tf
 
@@ -18,7 +19,7 @@ class Layer(object):
     """
 
     def __init__(self, **kwargs):
-        allowed_kwargs = {'name', 'logging'}
+        allowed_kwargs = {'name'}
         for kwarg in kwargs.keys():
             assert kwarg in allowed_kwargs, 'Invalid keyword argument: ' + kwarg
         name = kwargs.get('name')
@@ -26,10 +27,7 @@ class Layer(object):
             name = get_layer_name(self)
         self.name = name
         self.vars = {}
-        logging = kwargs.get('logging', False)
-        self.logging = logging
         self.sparse_inputs = False
-        self.called_times = 0
 
     def get_name(self):
         return self.name
@@ -44,59 +42,59 @@ class Layer(object):
         for var in self.vars:
             tf.summary.histogram(self.name + '_weights/' + var, self.vars[var])
 
-    def handle_dropout(self, dropout_bool, placeholders):
+    def handle_dropout(self, dropout_bool):
         if dropout_bool:
-            self.dropout = placeholders['dropout']
+            self.dropout = FLAGS.dropout
         else:
             self.dropout = 0.
 
 
-class Dense(Layer):
-    """Dense layer. """
-
-    def __init__(self, input_dim, output_dim, placeholders, dropout,
-                 sparse_inputs, act, bias, featureless, **kwargs):
-        super(Dense, self).__init__(**kwargs)
-
-        self.sparse_inputs = sparse_inputs
-        self.featureless = featureless
-        self.bias = bias
-        self.act = act
-
-        self.handle_dropout(dropout, placeholders)
-
-        with tf.variable_scope(self.name + '_vars'):
-            self.vars['weights'] = glorot([input_dim, output_dim],
-                                          name='weights')
-            if self.bias:
-                self.vars['bias'] = zeros([output_dim], name='bias')
-
-        if self.logging:
-            self._log_vars()
-
-    def _call(self, inputs):
-        x = inputs
-
-        # dropout
-        if self.sparse_inputs:
-            x = sparse_dropout(x, 1 - self.dropout, self.num_features_nonzero)
-        else:
-            x = tf.nn.dropout(x, 1 - self.dropout)
-
-        # transform
-        output = dot(x, self.vars['weights'], sparse=self.sparse_inputs)
-
-        # bias
-        if self.bias:
-            output += self.vars['bias']
-
-        return self.act(output)
+# class Dense(Layer):
+#     """Dense layer. """
+#
+#     def __init__(self, input_dim, output_dim, dropout,
+#                  sparse_inputs, act, bias, featureless, **kwargs):
+#         super(Dense, self).__init__(**kwargs)
+#
+#         self.sparse_inputs = sparse_inputs
+#         self.featureless = featureless
+#         self.bias = bias
+#         self.act = act
+#
+#         self.handle_dropout(dropout)
+#
+#         with tf.variable_scope(self.name + '_vars'):
+#             self.vars['weights'] = glorot([input_dim, output_dim],
+#                                           name='weights')
+#             if self.bias:
+#                 self.vars['bias'] = zeros([output_dim], name='bias')
+#
+#         if FLAGS.log:
+#             self._log_vars()
+#
+#     def _call(self, inputs):
+#         x = inputs
+#
+#         # dropout
+#         if self.sparse_inputs:
+#             x = sparse_dropout(x, 1 - self.dropout, self.num_features_nonzero)
+#         else:
+#             x = tf.nn.dropout(x, 1 - self.dropout)
+#
+#         # transform
+#         output = dot(x, self.vars['weights'], sparse=self.sparse_inputs)
+#
+#         # bias
+#         if self.bias:
+#             output += self.vars['bias']
+#
+#         return self.act(output)
 
 
 class GraphConvolution(Layer):
     """Graph convolution layer. """
 
-    def __init__(self, input_dim, output_dim, placeholders, dropout,
+    def __init__(self, input_dim, output_dim, dropout,
                  sparse_inputs, act, bias,
                  featureless, num_supports, **kwargs):
         super(GraphConvolution, self).__init__(**kwargs)
@@ -107,7 +105,7 @@ class GraphConvolution(Layer):
         self.support = None
         self.act = act
 
-        self.handle_dropout(dropout, placeholders)
+        self.handle_dropout(dropout)
 
         with tf.variable_scope(self.name + '_vars'):
             for i in range(num_supports):
@@ -116,13 +114,26 @@ class GraphConvolution(Layer):
             if self.bias:
                 self.vars['bias'] = zeros([output_dim], name='bias')
 
-        if self.logging:
+        if FLAGS.log:
             self._log_vars()
 
     def _call(self, inputs):
-        x = inputs[0]
-        self.laplacians = inputs[1]  # TODO:fix
-        num_features_nonzero = inputs[2]
+        assert (type(inputs) is list and inputs)
+        if type(inputs[0]) is list:
+            # Double list.
+            rtn = []
+            for input in inputs:
+                assert (len(input) == 3)
+                rtn.append(self._call_one_graph(input))
+            return rtn
+        else:
+            assert (len(inputs) == 3)
+            return self._call_one_graph(inputs)
+
+    def _call_one_graph(self, input):
+        x = input[0]
+        self.laplacians = input[1]
+        num_features_nonzero = input[2]
 
         # dropout
         if self.sparse_inputs:
@@ -156,13 +167,22 @@ class Average(Layer):
         super(Average, self).__init__(**kwargs)
 
     def _call(self, inputs):
-        x = inputs
+        if type(inputs) is list:
+            rtn = []
+            for input in inputs:
+                rtn.append(self._call_one_mat(input))
+            return rtn
+        else:
+            return self._call_one_mat(inputs)
+
+    def _call_one_mat(self, input):
+        x = input
         output = tf.reduce_mean(x, 0)  # x is N*D
 
         return output
 
 
-class Attention(Layer):
+class Attention(Average):
     """Attention layer."""
 
     def __init__(self, input_dim, sparse_inputs=False, **kwargs):
@@ -173,7 +193,7 @@ class Attention(Layer):
         with tf.variable_scope(self.name + '_vars'):
             self.vars['weights'] = glorot([input_dim, input_dim], name='weights')
 
-    def _call(self, inputs):
+    def _call_one_mat(self, inputs):
         x = inputs  # x is N*D
         temp = tf.reshape(tf.reduce_mean(x, 0), [1, -1])
         h_avg = tf.tanh(tf.reshape(dot(temp, self.vars['weights'], sparse=self.sparse_inputs), [-1, 1]))
@@ -182,10 +202,35 @@ class Attention(Layer):
         return tf.squeeze(output)
 
 
-class NTN(Layer):
+class Dot(Layer):
+    """ Dot layer. """
+
+    def __init__(self, **kwargs):
+        super(Dot, self).__init__(**kwargs)
+
+    def _call(self, inputs):
+        assert (type(inputs) is list and inputs)
+        if type(inputs[0]) is list:
+            # Double list.
+            rtn = []
+            for input in inputs:
+                assert (len(input) == 2)
+                rtn.append(self._call_one_pair(input))
+            return rtn
+        else:
+            assert (len(inputs) == 2)
+            return self._call_one_pair(input)
+
+    def _call_one_pair(self, input):
+        x_1 = input[0]
+        x_2 = input[1]
+        return tf.reduce_sum(tf.multiply(x_1, x_2))
+
+
+class NTN(Dot):
     """NTN layer. """
 
-    def __init__(self, input_dim, feature_map_dim, placeholders, dropout,
+    def __init__(self, input_dim, feature_map_dim, dropout,
                  inneract, bias, **kwargs):
         super(NTN, self).__init__(**kwargs)
 
@@ -193,7 +238,7 @@ class NTN(Layer):
         self.bias = bias
         self.inneract = inneract
 
-        self.handle_dropout(dropout, placeholders)
+        self.handle_dropout(dropout)
 
         with tf.variable_scope(self.name + '_vars'):
             self.vars['weights_W'] = glorot([input_dim, input_dim,
@@ -206,12 +251,12 @@ class NTN(Layer):
             if self.bias:
                 self.vars['bias'] = zeros([feature_map_dim], name='bias')
 
-        if self.logging:
+        if FLAGS.log:
             self._log_vars()
 
-    def _call(self, inputs):
-        x_1 = inputs[0]
-        x_2 = inputs[1]
+    def _call_one_pair(self, input):
+        x_1 = input[0]
+        x_2 = input[1]
 
         # dropout
         x_1 = tf.nn.dropout(x_1, 1 - self.dropout)
@@ -238,18 +283,6 @@ class NTN(Layer):
         output = tf.reduce_sum(self.vars['weights_U'] * tensor_bi_product)
 
         return output
-
-
-class Dot(Layer):
-    """ Dot layer. """
-
-    def __init__(self, **kwargs):
-        super(Dot, self).__init__(**kwargs)
-
-    def _call(self, inputs):
-        x_1 = inputs[0]
-        x_2 = inputs[1]
-        return tf.reduce_sum(tf.multiply(x_1, x_2))
 
 
 # global unique layer ID dictionary for layer name assignment

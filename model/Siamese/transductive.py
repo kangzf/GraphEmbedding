@@ -1,3 +1,4 @@
+from utils_siamese import solve_parent_dir
 from utils import load_data, exec_turnoff_print
 from similarity import create_sim_kernel
 from dist_calculator import DistCalculator
@@ -14,6 +15,7 @@ NONORM_YETA = 0.01
 NORM_YETA = 0.6
 DIMS = [10, 40, 70]
 
+solve_parent_dir()
 
 
 def main():
@@ -21,8 +23,8 @@ def main():
     sim_mat_dict, ttsp = load_train_test_joint_sim_mat()
     eval_dict = {'nonorm': Eval(
         DATASET, DIST_ALGO, SIM_KERNEL, NONORM_YETA, plot_results=True),
-                 'norm': Eval(
-                     DATASET, DIST_ALGO, SIM_KERNEL, NORM_YETA, plot_results=True)}
+        'norm': Eval(
+            DATASET, DIST_ALGO, SIM_KERNEL, NORM_YETA, plot_results=True)}
     for norm_str, sim_mat in sim_mat_dict.items():
         for dim in DIMS:
             emb = perform_svd(sim_mat, dim)

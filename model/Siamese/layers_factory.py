@@ -1,10 +1,11 @@
+from config import FLAGS
 from layers import GraphConvolution, Average, NTN, Dot
 import tensorflow as tf
 import numpy as np
 from math import exp
 
 
-def create_layers(model, FLAGS):
+def create_layers(model):
     layers = []
     num_layers = FLAGS.num_layers
     for i in range(num_layers):
@@ -43,20 +44,18 @@ def create_GraphConvolution_layer(layer_info, model, layer_id):
     return GraphConvolution(
         input_dim=input_dim,
         output_dim=int(layer_info['output_dim']),
-        placeholders=model.phldr,
         dropout=parse_as_bool(layer_info['dropout']),
         sparse_inputs=parse_as_bool(layer_info['sparse_inputs']),
         act=create_activation(layer_info['act']),
         bias=parse_as_bool(layer_info['bias']),
         featureless=False,
-        num_supports=1,
-        logging=model.log)
+        num_supports=1)
 
 
 def create_Average_layer(layer_info, model):
     if not len(layer_info) == 0:
         raise RuntimeError('Average layer must have 0 specs')
-    return Average(logging=model.log)
+    return Average()
 
 
 def create_NTN_layer(layer_info, model):
@@ -65,16 +64,14 @@ def create_NTN_layer(layer_info, model):
     return NTN(
         input_dim=int(layer_info['input_dim']),
         feature_map_dim=int(layer_info['feature_map_dim']),
-        placeholders=model.phldr,
         dropout=parse_as_bool(layer_info['dropout']),
         inneract=create_activation(layer_info['inneract']),
-        bias=parse_as_bool(layer_info['bias']),
-        logging=model.log)
+        bias=parse_as_bool(layer_info['bias']))
 
 def create_Dot_layer(layer_info, model):
     if not len(layer_info) == 0:
         raise RuntimeError('Dot layer must have 0 specs')
-    return Dot(logging=model.log)
+    return Dot()
 
 def create_activation(act, sim_kernel=None, use_tf=True):
     if act == 'relu':

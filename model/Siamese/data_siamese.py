@@ -1,17 +1,22 @@
 from data import Data
+from config import FLAGS
 from utils import load_data, exec_turnoff_print
+<<<<<<< HEAD
 from utils_siamese import get_phldr
 from samplers import RandomSampler, DistributionSampler
 from sklearn.preprocessing import OneHotEncoder
 import scipy.sparse as sp
 import numpy as np
 import networkx as nx
+=======
+from graphs import ModelGraphList, NodeFeatureOneHotEncoder
+>>>>>>> 5cb463f0a093adf218bf37f25fc9fac0eeabde1c
 
 exec_turnoff_print()
 
 
 class SiameseModelData(Data):
-    def __init__(self, FLAGS):
+    def __init__(self):
         self.dataset = FLAGS.dataset
         self.valid_percentage = FLAGS.valid_percentage
         self.node_feat_name = FLAGS.node_feat_name
@@ -32,7 +37,7 @@ class SiameseModelData(Data):
         self.n = len(orig_train_data.graphs)
         train_gs, valid_gs = self._train_val_split(orig_train_data)
         test_gs = load_data(self.dataset, train=False).graphs
-        self.node_feat_encoder = self._get_node_feature_encoder( \
+        self.node_feat_encoder = self._get_node_feature_encoder(
             orig_train_data.graphs + test_gs)
         self._check_graphs_num(test_gs, 'test')
         self.train_data = ModelGraphList(
@@ -51,50 +56,26 @@ class SiameseModelData(Data):
     def input_dim(self):
         return self.node_feat_encoder.input_dim()
 
-    def get_feed_dict(self, FLAGS, phldr, dist_calculator, tvt, \
-                      test_id, train_id):
-        rtn = dict()
-        # no pair is specified == train or val
-        if tvt == 'train' or tvt == 'val':
-            assert (test_id is None and train_id is None)
-            pairs = []
-            for _ in range(FLAGS.batch_size):
-                pairs.append(self._get_graph_pair(tvt))
+    def get_graph_pair(self, train_val_test):
+        graph_collection = self._get_graph_collection(train_val_test)
+        return graph_collection.get_graph_pair()
+
+    def get_graph_triple_for_hinge_loss(self, train_val_test):
+        graph_collection = self._get_graph_collection(train_val_test)
+        return graph_collection.get_triple_for_hinge_loss()
+
+    def get_orig_train_graph(self, orig_train_id):
+        trainlen = self.train_data.num_graphs()
+        vallen = self.valid_data.num_graphs()
+        if 0 <= orig_train_id < trainlen:
+            return self.train_data.get_graph(orig_train_id)
+        elif orig_train_id < trainlen + vallen:
+            return self.valid_data.get_graph(orig_train_id - trainlen)
         else:
-            assert (tvt == 'test')
-            g1 = self.test_data.get_graph(test_id)
-            g2 = self._get_orig_train_graph(train_id)
-            pairs = [(g1, g2)]
-        for i, (g1, g2) in enumerate(pairs):
-            rtn[get_phldr(phldr, 'inputs_1', tvt)[i]] = \
-                g1.get_node_inputs()
-            rtn[get_phldr(phldr, 'inputs_2', tvt)[i]] = \
-                g2.get_node_inputs()
-            rtn[get_phldr(phldr, 'num_inputs_1_nonzero', tvt)[i]] = \
-                g1.get_node_inputs_num_nonzero()
-            rtn[get_phldr(phldr, 'num_inputs_2_nonzero', tvt)[i]] = \
-                g2.get_node_inputs_num_nonzero()
-            num_laplacians = 1
-            for j in range(num_laplacians):
-                rtn[get_phldr(phldr, 'laplacians_1', tvt)[i][j]] = \
-                    g1.get_laplacians()[j]
-                rtn[get_phldr(phldr, 'laplacians_2', tvt)[i][j]] = \
-                    g2.get_laplacians()[j]
-                assert (len(g1.get_laplacians()) == len(g2.get_laplacians())
-                        == num_laplacians)
-            if tvt == 'train' or tvt == 'val':
-                dists = np.zeros((FLAGS.batch_size, 1))
-                norm_dists = np.zeros((FLAGS.batch_size, 1))
-                for i in range(FLAGS.batch_size):
-                    g1, g2 = self._get_graph_pair(tvt)
-                    dist, norm_dist = self._get_dist(
-                        g1.get_nxgraph(), g2.get_nxgraph(), dist_calculator)
-                    dists[i] = dist
-                    norm_dists[i] = norm_dist
-                rtn[phldr['dists']] = dists
-                rtn[phldr['norm_dists']] = norm_dists
-                rtn[phldr['dropout']] = FLAGS.dropout
-        return rtn
+            assert (False)
+
+    def get_dist(self, g1, g2, dist_calculator):
+        return dist_calculator.calculate_dist(g1, g2)
 
     def m_n(self):
         return self.m, self.n
@@ -139,6 +120,7 @@ class SiameseModelData(Data):
         else:
             raise RuntimeError('Unknown train_val_test {}'.format(
                 train_val_test))
+<<<<<<< HEAD
 
     def _get_graph_pair(self, train_val_test):
         graph_collection = self._get_graph_collection(train_val_test)
@@ -268,3 +250,5 @@ class ModelGraph(object):
             sparse_mx = to_tuple(sparse_mx)
 
         return sparse_mx
+=======
+>>>>>>> 5cb463f0a093adf218bf37f25fc9fac0eeabde1c

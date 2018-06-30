@@ -12,6 +12,9 @@ class Sampler(object):
     def get_pair(self):
         raise NotImplementedError()
 
+    def get_triple_for_hinge_loss(self):
+        raise NotImplementedError()
+
 
 class RandomSampler(Sampler):
     def __init__(self, gs, sample_num, sampler_duplicate_removal):
@@ -26,6 +29,9 @@ class RandomSampler(Sampler):
             self.idx = 0
         g2 = self.gs[self.idx]
         return g1, g2
+
+    def get_triple_for_hinge_loss(self):
+        raise NotImplementedError()
 
 
 class DistributionSampler(Sampler):
@@ -57,3 +63,6 @@ class DistributionSampler(Sampler):
             self.cur = 0
         self.item_idx = random.Random(123 + self.cur).randint(0, self.bin_size - 1)
         return g1, g2
+
+    def get_triple_for_hinge_loss(self):
+        raise NotImplementedError()

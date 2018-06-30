@@ -1,3 +1,4 @@
+from config import FLAGS
 import sys
 from os.path import dirname, abspath
 
@@ -5,7 +6,11 @@ cur_folder = dirname(abspath(__file__))
 sys.path.insert(0, '{}/../../src'.format(cur_folder))
 
 
-def check_flags(FLAGS):
+def solve_parent_dir():
+    pass
+
+
+def check_flags():
     assert (0 < FLAGS.valid_percentage < 1)
     assert (FLAGS.sample_num >= -1)
     assert (FLAGS.yeta >= 0)
@@ -22,8 +27,11 @@ def get_siamese_dir():
     return cur_folder
 
 
-def get_phldr(phldr, key, tvt):
-    if 'train' in tvt or 'val' in tvt:
-        return phldr[key]
-    else:
-        return phldr['test_{}'.format(key.replace('inputs', 'input'))]
+def get_model_info_as_str(model_info_table=None):
+    rtn = ''
+    for k, v in sorted(FLAGS.flag_values_dict().items(), key=lambda x: x[0]):
+        s = '{0:26} : {1}\n'.format(k, v)
+        rtn += s
+        if model_info_table:
+            model_info_table.append([k, '**{}**'.format(v)])
+    return rtn

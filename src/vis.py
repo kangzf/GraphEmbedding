@@ -1,6 +1,4 @@
-import matplotlib
 import matplotlib.pyplot as plt
-import numpy as np
 import networkx as nx
 from networkx.drawing.nx_agraph import graphviz_layout
 import math
@@ -105,12 +103,12 @@ def vis(q=None, gs=None, info_dict=None):
     left = 0.01  # the left side of the subplots of the figure
     right = 0.99  # the right side of the subplots of the figure
     top = 1 - info_dict['top_space']  # the top of the subplots of the figure
-    bottom = info_dict[
-        'bottom_space']  # the bottom of the subplots of the figure
-    wspace = info_dict[
-        'wbetween_space']  # the amount of width reserved for blank space between subplots
-    hspace = info_dict[
-        'hbetween_space']  # the amount of height reserved for white space between subplots
+    bottom = \
+        info_dict['bottom_space']  # the bottom of the subplots of the figure
+    wspace = \
+        info_dict['wbetween_space']  # the amount of width reserved for blank space between subplots
+    hspace = \
+        info_dict['hbetween_space']  # the amount of height reserved for white space between subplots
 
     plt.subplots_adjust(left=left, bottom=bottom, right=right, top=top,
                         wspace=wspace, hspace=hspace)
