@@ -1,4 +1,4 @@
-from samplers import RandomSampler
+from samplers import RandomSampler, DistributionSampler
 import scipy.sparse as sp
 from sklearn.preprocessing import OneHotEncoder
 import networkx as nx
@@ -11,6 +11,9 @@ class ModelGraphList(object):
         self.gs = [ModelGraph(g, node_feat_encoder) for g in gs]
         if sampler == 'random':
             self.sampler = RandomSampler(
+                self.gs, sample_num, sampler_duplicate_removal)
+        elif sampler == 'density':
+            self.sampler = DistributionSampler(
                 self.gs, sample_num, sampler_duplicate_removal)
         else:
             raise RuntimeError('Unknown sampler {}'.format(sampler))

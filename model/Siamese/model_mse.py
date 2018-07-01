@@ -144,6 +144,7 @@ class SiameseGCNTNMSE(Model):
 
     def _mse_loss(self):
         dists = self.norm_dists if FLAGS.dist_norm else self.dists
+
         assert (len(self.train_val_outputs) == FLAGS.batch_size)
         return tf.nn.l2_loss(
             self.sim_kernel.dist_to_sim_tf(dists) -
