@@ -41,7 +41,7 @@ flags.DEFINE_string('model', 'siamese_gcntn_mse', 'Model string.')
 #     'layer_0',
 #     'NTN:input_dim=16,feature_map_dim=10,inneract=relu,'
 #     'dropout=True,bias=True', '')
-flags.DEFINE_integer('num_layers', 4, 'Number of layers.')
+flags.DEFINE_integer('num_layers', 5, 'Number of layers.')
 flags.DEFINE_string(
     'layer_0',
     'GraphConvolution:output_dim=32,act=relu,'
