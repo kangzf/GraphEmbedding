@@ -1,5 +1,5 @@
-from MSEModel import SiameseGCNTNMSE
-from HingeModel import SiameseGCNTNHinge
+from model_mse import SiameseGCNTNMSE
+from model_hinge import SiameseGCNTNHinge
 
 
 def create_model(model, input_dim):

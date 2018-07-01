@@ -15,12 +15,9 @@ class Model(object):
 
         self.vars = {}
         self.placeholders = {}
-
         self.layers = []
-
         self.train_val_outputs = None
         self.test_output = None
-
         self.loss = 0
         self.optimizer = None
         self.opt_op = None
@@ -30,9 +27,7 @@ class Model(object):
         self.weight_decay = FLAGS.weight_decay
         self.optimizer = tf.train.AdamOptimizer(
             learning_rate=FLAGS.learning_rate)
-        self.build()
 
-    def build(self):
         self._build()
         print('Model built')
         # Build metrics
@@ -42,6 +37,7 @@ class Model(object):
         print('Optimizer built')
 
     def _build(self):
+        # Create layers according to FLAGS.
         with tf.variable_scope(self.name):
             self.layers = create_layers(self)
         assert (len(self.layers) > 0)
