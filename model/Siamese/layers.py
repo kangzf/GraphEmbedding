@@ -49,48 +49,6 @@ class Layer(object):
             self.dropout = 0.
 
 
-# class Dense(Layer):
-#     """Dense layer. """
-#
-#     def __init__(self, input_dim, output_dim, dropout,
-#                  sparse_inputs, act, bias, featureless, **kwargs):
-#         super(Dense, self).__init__(**kwargs)
-#
-#         self.sparse_inputs = sparse_inputs
-#         self.featureless = featureless
-#         self.bias = bias
-#         self.act = act
-#
-#         self.handle_dropout(dropout)
-#
-#         with tf.variable_scope(self.name + '_vars'):
-#             self.vars['weights'] = glorot([input_dim, output_dim],
-#                                           name='weights')
-#             if self.bias:
-#                 self.vars['bias'] = zeros([output_dim], name='bias')
-#
-#         if FLAGS.log:
-#             self._log_vars()
-#
-#     def _call(self, inputs):
-#         x = inputs
-#
-#         # dropout
-#         if self.sparse_inputs:
-#             x = sparse_dropout(x, 1 - self.dropout, self.num_features_nonzero)
-#         else:
-#             x = tf.nn.dropout(x, 1 - self.dropout)
-#
-#         # transform
-#         output = dot(x, self.vars['weights'], sparse=self.sparse_inputs)
-#
-#         # bias
-#         if self.bias:
-#             output += self.vars['bias']
-#
-#         return self.act(output)
-
-
 class GraphConvolution(Layer):
     """Graph convolution layer. """
 
@@ -182,7 +140,7 @@ class Average(Layer):
         return output
 
 
-class Attention(Average):
+class Attention(Layer):
     """Attention layer."""
 
     def __init__(self, input_dim, sparse_inputs=False, **kwargs):
@@ -200,6 +158,73 @@ class Attention(Average):
         att = tf.sigmoid(tf.matmul(x, h_avg))  # tf.nn.softmax?
         output = tf.matmul(tf.reshape(att, [1, -1]), x)
         return tf.squeeze(output)
+
+
+class Dense(Layer):
+    """Dense layer. """
+
+    def __init__(self, input_dim, output_dim, dropout, act, bias, **kwargs):
+        super(Dense, self).__init__(**kwargs)
+
+        self.bias = bias
+        self.act = act
+
+        self.handle_dropout(dropout)
+
+        with tf.variable_scope(self.name + '_vars'):
+            self.vars['weights'] = glorot([input_dim, output_dim],
+                                          name='weights')
+            if self.bias:
+                self.vars['bias'] = zeros([output_dim], name='bias')
+
+        if FLAGS.log:
+            self._log_vars()
+
+    def _call(self, inputs):
+        if type(inputs) is list:
+            rtn = []
+            for input in inputs:
+                rtn.append(self._call_one_mat(input))
+            return rtn
+        else:
+            return self._call_one_mat(inputs)
+
+    def _call_one_mat(self, inputs):
+        x = inputs
+
+        # dropout
+        x = tf.nn.dropout(x, 1 - self.dropout)
+
+        # transform
+        output = dot(x, self.vars['weights'])
+
+        # bias
+        if self.bias:
+            output += self.vars['bias']
+
+        return self.act(output)
+
+
+class Padding(Layer):
+    def __init__(self, max_in_dims, padding_value, **kwargs):
+        super(Padding, self).__init__(**kwargs)
+        self.padding_value = padding_value
+        self.max_in_dims = max_in_dims
+
+    def _call(self, inputs):
+        if type(inputs) is list:
+            rtn = []
+            for input in inputs:
+                rtn.append(self._call_one_mat(input))
+            return rtn
+        else:
+            return self._call_one_mat(inputs)
+
+    def _call_one_mat(self, inputs):
+        s = tf.shape(inputs)
+        # paddings = [[0, m - s[i]] for (i, m) in enumerate(self.max_in_dims)]
+        paddings = [[0, self.max_in_dims - s[0]], [0, 0]]  # Assume inputs dim is N*D
+        return tf.pad(inputs, paddings, 'CONSTANT', constant_values=self.padding_value)
 
 
 class Dot(Layer):

@@ -25,7 +25,7 @@ flags.DEFINE_string('dist_metric', 'ged', 'Distance metric to use.')
 flags.DEFINE_string('dist_algo', 'astar',
                     'Ground-truth distance algorithm to use.')
 """ sampler: random, density """
-flags.DEFINE_string('sampler', 'density', 'Sampler to use.')
+flags.DEFINE_string('sampler', 'random', 'Sampler to use.')
 """ sample_num: 1, 2, 3, ..., -1 (infinite/continuous sampling). """
 flags.DEFINE_integer('sample_num', -1,
                      'Number of pairs to sample for training.')
@@ -50,11 +50,18 @@ flags.DEFINE_string(
     'layer_1',
     'GraphConvolution:input_dim=32,output_dim=16,act=identity,'
     'dropout=True,bias=True,sparse_inputs=False', '')
+# flags.DEFINE_string(
+#     'layer_2',
+#     'Average', '')
 flags.DEFINE_string(
     'layer_2',
-    'Average', '')
+    'Dense:input_dim=16,output_dim=1,dropout=True,'
+    'act=relu,bias=True', '')
 flags.DEFINE_string(
     'layer_3',
+    'Padding:max_in_dims=10,padding_value=0', '')  # Assume the max node # is max_in_dim
+flags.DEFINE_string(
+    'layer_4',
     'NTN:input_dim=16,feature_map_dim=10,inneract=relu,'
     'dropout=True,bias=True', '')
 # flags.DEFINE_string(

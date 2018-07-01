@@ -1,5 +1,5 @@
 from config import FLAGS
-from layers import GraphConvolution, Average, NTN, Dot
+from layers import GraphConvolution, Average, NTN, Dot, Dense, Padding
 import tensorflow as tf
 import numpy as np
 from math import exp
@@ -25,6 +25,10 @@ def create_layers(model):
             layers.append(create_NTN_layer(layer_info, model))
         elif name == 'Dot':
             layers.append(create_Dot_layer(layer_info, model))
+        elif name == 'Dense':
+            layers.append(create_Dense_layer(layer_info, model))
+        elif name == 'Padding':
+            layers.append(create_Padding_layer(layer_info, model))
         else:
             raise RuntimeError('Unknown layer {}'.format(name))
     return layers
@@ -68,10 +72,31 @@ def create_NTN_layer(layer_info, model):
         inneract=create_activation(layer_info['inneract']),
         bias=parse_as_bool(layer_info['bias']))
 
+
 def create_Dot_layer(layer_info, model):
     if not len(layer_info) == 0:
         raise RuntimeError('Dot layer must have 0 specs')
     return Dot()
+
+
+def create_Dense_layer(layer_info, model):
+    if not len(layer_info) == 5:
+        raise RuntimeError('Dot layer must have 5 specs')
+    return Dense(
+        input_dim=int(layer_info['input_dim']),
+        output_dim=int(layer_info['output_dim']),
+        dropout=parse_as_bool(layer_info['dropout']),
+        act=create_activation(layer_info['act']),
+        bias=parse_as_bool(layer_info['bias']))
+
+
+def create_Padding_layer(layer_info, model):
+    if not len(layer_info) == 2:
+        raise RuntimeError('Padding layer must have 2 specs')
+    return Padding(
+        max_in_dims=int(layer_info['max_in_dims']),
+        padding_value=int(layer_info['padding_value']))
+
 
 def create_activation(act, sim_kernel=None, use_tf=True):
     if act == 'relu':
