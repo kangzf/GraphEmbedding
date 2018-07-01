@@ -59,7 +59,7 @@ def test(data, dist_calculator, model, saver, sess):
             sim_i_j, test_time = run_tf(
                 data, dist_calculator, model, saver, sess,
                 'test', i, j)
-            sim_i_j = sim_i_j[0]
+            sim_i_j = sim_i_j
             test_time *= 1000
             true_sim = eval.get_true_sim(i, j, FLAGS.dist_norm)
             print('{},{},{:.2f}mec,{:.4f},{:.4f}'.format(
@@ -70,6 +70,7 @@ def test(data, dist_calculator, model, saver, sess):
     print('Evaluating...')
     results = eval.eval_test(FLAGS.model, test_sim_mat, test_time_mat)
     print('Results generated with {} metrics'.format(len(results)))
+    pretty_print_dict(results)
     return results
 
 
@@ -94,7 +95,17 @@ def run_tf(data, dist_calculator, model, saver, sess, tvt,
     if tvt == 'test':
         # tf_result = sess.run([model.pred_sim()], feed_dict=feed_dict)[-1]
         # print('tf result', tf_result[-1])
-        np_result = model.apply_final_act_np(outs[-1])
+        assert (len(outs[-1]) == 1)
+        np_result = model.apply_final_act_np(outs[-1][0])
         # print('np result', np_result)
         outs[-1] = np_result
     return outs[-1], time_rtn
+
+
+def pretty_print_dict(d, indent=0):
+    for key, value in d.items():
+        print('\t' * indent + str(key))
+        if isinstance(value, dict):
+            pretty_print_dict(value, indent + 1)
+        else:
+            print('\t' * (indent + 1) + str(value))
