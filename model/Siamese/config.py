@@ -62,7 +62,7 @@ flags.DEFINE_string(
     'Padding:max_in_dims=10,padding_value=0', '')  # Assume the max node # is max_in_dim
 flags.DEFINE_string(
     'layer_4',
-    'NTN:input_dim=16,feature_map_dim=10,inneract=relu,'
+    'NTN:input_dim=10,feature_map_dim=10,inneract=relu,'
     'dropout=True,bias=True', '')
 # flags.DEFINE_string(
 #     'layer_3',
